@@ -150,19 +150,18 @@ func TestLookup(t *testing.T) {
 				t.Errorf("Expected Bearer test-key, got %s", auth)
 			}
 
-			// Return mock response
-			response := model.DeDiResponse{
-				Data: model.DeDiRecord{
-					Schema: model.DeDiSchema{
-						EntityName:  "test.example.com",
-						EntityURL:   "https://test.example.com",
-						PublicKey:   "test-public-key",
-						KeyType:     "ed25519",
-						KeyFormat:   "base64",
+			// Return mock response using map structure
+			response := map[string]interface{}{
+				"message": "success",
+				"data": map[string]interface{}{
+					"schema": map[string]interface{}{
+						"entity_name": "test.example.com",
+						"entity_url":  "https://test.example.com",
+						"publicKey":   "test-public-key",
 					},
-					State:     "active",
-					CreatedAt: "2023-01-01T00:00:00Z",
-					UpdatedAt: "2023-01-01T00:00:00Z",
+					"state":      "active",
+					"created_at": "2023-01-01T00:00:00Z",
+					"updated_at": "2023-01-01T00:00:00Z",
 				},
 			}
 			w.Header().Set("Content-Type", "application/json")
@@ -198,8 +197,8 @@ func TestLookup(t *testing.T) {
 		}
 
 		subscription := results[0]
-		if subscription.SubscriberID != "test.example.com" {
-			t.Errorf("Expected subscriber_id test.example.com, got %s", subscription.SubscriberID)
+		if subscription.Subscriber.SubscriberID != "test.example.com" {
+			t.Errorf("Expected subscriber_id test.example.com, got %s", subscription.Subscriber.SubscriberID)
 		}
 		if subscription.SigningPublicKey != "test-public-key" {
 			t.Errorf("Expected signing_public_key test-public-key, got %s", subscription.SigningPublicKey)
@@ -235,6 +234,43 @@ func TestLookup(t *testing.T) {
 		_, err = client.Lookup(ctx, req)
 		if err == nil {
 			t.Error("Expected error for 404 response, got nil")
+		}
+	})
+
+	// Test missing required fields
+	t.Run("missing entity_name", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			response := map[string]interface{}{
+				"data": map[string]interface{}{
+					"schema": map[string]interface{}{
+						"entity_url": "https://test.example.com",
+						"publicKey":  "test-public-key",
+					},
+				},
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(response)
+		}))
+		defer server.Close()
+
+		config := &Config{
+			BaseURL:      server.URL,
+			ApiKey:       "test-key",
+			NamespaceID:  "test-namespace",
+			RegistryName: "test-registry",
+			RecordName:   "test-record",
+		}
+
+		client, closer, err := New(ctx, config)
+		if err != nil {
+			t.Fatalf("New() error = %v", err)
+		}
+		defer closer()
+
+		req := &model.Subscription{}
+		_, err = client.Lookup(ctx, req)
+		if err == nil {
+			t.Error("Expected error for missing entity_name, got nil")
 		}
 	})
 
@@ -288,6 +324,38 @@ func TestLookup(t *testing.T) {
 		_, err = client.Lookup(ctx, req)
 		if err == nil {
 			t.Error("Expected network error, got nil")
+		}
+	})
+
+	// Test missing data field
+	t.Run("missing data field", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			response := map[string]interface{}{
+				"message": "success",
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(response)
+		}))
+		defer server.Close()
+
+		config := &Config{
+			BaseURL:      server.URL,
+			ApiKey:       "test-key",
+			NamespaceID:  "test-namespace",
+			RegistryName: "test-registry",
+			RecordName:   "test-record",
+		}
+
+		client, closer, err := New(ctx, config)
+		if err != nil {
+			t.Fatalf("New() error = %v", err)
+		}
+		defer closer()
+
+		req := &model.Subscription{}
+		_, err = client.Lookup(ctx, req)
+		if err == nil {
+			t.Error("Expected error for missing data field, got nil")
 		}
 	})
 }

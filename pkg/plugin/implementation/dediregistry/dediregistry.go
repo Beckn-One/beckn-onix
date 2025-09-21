@@ -61,7 +61,7 @@ func New(ctx context.Context, cfg *Config) (*DeDiRegistryClient, func() error, e
 	}
 
 	retryClient := retryablehttp.NewClient()
-	
+
 	// Configure timeout if provided
 	if cfg.Timeout > 0 {
 		retryClient.HTTPClient.Timeout = time.Duration(cfg.Timeout) * time.Second
@@ -87,14 +87,14 @@ func New(ctx context.Context, cfg *Config) (*DeDiRegistryClient, func() error, e
 
 // Lookup implements RegistryLookup interface - calls the DeDi lookup endpoint and returns Subscription.
 func (c *DeDiRegistryClient) Lookup(ctx context.Context, req *model.Subscription) ([]model.Subscription, error) {
-	lookupURL := fmt.Sprintf("%s/dedi/lookup/%s/%s/%s", 
+	lookupURL := fmt.Sprintf("%s/dedi/lookup/%s/%s/%s",
 		c.config.BaseURL, c.config.NamespaceID, c.config.RegistryName, c.config.RecordName)
 
 	httpReq, err := retryablehttp.NewRequest("GET", lookupURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
-	
+
 	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.config.ApiKey))
 	httpReq = httpReq.WithContext(ctx)
 
@@ -116,26 +116,61 @@ func (c *DeDiRegistryClient) Lookup(ctx context.Context, req *model.Subscription
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	var response model.DeDiResponse
-	err = json.Unmarshal(body, &response)
+	// Parse response using local variables
+	var responseData map[string]interface{}
+	err = json.Unmarshal(body, &responseData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal response body: %w", err)
 	}
 
 	log.Debugf(ctx, "DeDi lookup request successful")
-	
-	// Convert DeDi response to Subscription format (essential fields only)
-	subscription := model.Subscription{
-		Subscriber: model.Subscriber{
-			SubscriberID: response.Data.Schema.EntityName,
-			URL:          response.Data.Schema.EntityURL,
-		},
-		SigningPublicKey: response.Data.Schema.PublicKey,
-		Status:           response.Data.State,
-		Created:          parseTime(response.Data.CreatedAt),
-		Updated:          parseTime(response.Data.UpdatedAt),
+
+	// Extract data using local variables
+	data, ok := responseData["data"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid response format: missing data field")
+	}
+
+	schema, ok := data["schema"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid response format: missing schema field")
+	}
+
+	// Extract values using type assertions with error checking
+	entityName, ok := schema["entity_name"].(string)
+	if !ok || entityName == "" {
+		return nil, fmt.Errorf("invalid or missing entity_name in response")
 	}
 	
+	entityURL, ok := schema["entity_url"].(string)
+	if !ok || entityURL == "" {
+		return nil, fmt.Errorf("invalid or missing entity_url in response")
+	}
+	
+	publicKey, ok := schema["publicKey"].(string)
+	if !ok || publicKey == "" {
+		return nil, fmt.Errorf("invalid or missing publicKey in response")
+	}
+	
+	// Optional fields - use blank identifier for non-critical fields
+	state, _ := data["state"].(string)
+	createdAt, _ := data["created_at"].(string)
+	updatedAt, _ := data["updated_at"].(string)
+
+	// Convert to Subscription format
+	subscription := model.Subscription{
+		Subscriber: model.Subscriber{
+			SubscriberID: entityName,
+			URL:          entityURL,
+			Domain:       req.Domain,
+			Type:         req.Type,
+		},
+		SigningPublicKey: publicKey,
+		Status:           state,
+		Created:          parseTime(createdAt),
+		Updated:          parseTime(updatedAt),
+	}
+
 	return []model.Subscription{subscription}, nil
 }
 

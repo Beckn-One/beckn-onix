@@ -38,12 +38,60 @@ func TestDediRegistryProvider_New(t *testing.T) {
 	}
 }
 
-func TestDediRegistryProvider_New_NilContext(t *testing.T) {
+func TestDediRegistryProvider_New_InvalidConfig(t *testing.T) {
+	ctx := context.Background()
 	provider := dediRegistryProvider{}
-	config := map[string]string{}
 
-	_, _, err := provider.New(nil, config)
-	if err == nil {
-		t.Error("New() with nil context should return error")
+	tests := []struct {
+		name   string
+		config map[string]string
+	}{
+		{
+			name:   "missing baseURL",
+			config: map[string]string{"apiKey": "test-key"},
+		},
+		{
+			name:   "missing apiKey",
+			config: map[string]string{"baseURL": "https://test.com"},
+		},
+		{
+			name:   "empty config",
+			config: map[string]string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, _, err := provider.New(ctx, tt.config)
+			if err == nil {
+				t.Errorf("New() with %s should return error", tt.name)
+			}
+		})
+	}
+}
+
+func TestDediRegistryProvider_New_InvalidTimeout(t *testing.T) {
+	ctx := context.Background()
+	provider := dediRegistryProvider{}
+
+	config := map[string]string{
+		"baseURL":      "https://test.com",
+		"apiKey":       "test-key",
+		"namespaceID":  "test-namespace",
+		"registryName": "test-registry",
+		"recordName":   "test-record",
+		"timeout":      "invalid",
+	}
+
+	// Invalid timeout should be ignored, not cause error
+	dediRegistry, closer, err := provider.New(ctx, config)
+	if err != nil {
+		t.Errorf("New() with invalid timeout should not return error, got: %v", err)
+	}
+	if dediRegistry == nil {
+		t.Error("New() should return valid registry even with invalid timeout")
+	}
+	if closer != nil {
+		closer()
 	}
 }
