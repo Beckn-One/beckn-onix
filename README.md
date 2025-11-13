@@ -60,6 +60,7 @@ The **Beckn Protocol** is an open protocol that enables location-aware, local co
 - **RabbitMQ Integration**: Asynchronous message processing via message queues
 - **Connection Pooling**: Efficient resource utilization
 - **Configurable Timeouts**: Fine-tuned performance controls
+- **Automatic Retry**: Configurable retry logic for failed HTTP requests with custom delays and retryable status codes
 
 ### 📊 **Observability**
 - **Structured Logging**: JSON-formatted logs with contextual information

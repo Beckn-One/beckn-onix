@@ -28,6 +28,10 @@ modules:
         maxIdleConnsPerHost: 200
         idleConnTimeout: 300s
         responseHeaderTimeout: 5s
+        retry:
+          max_retries: 3
+          delays: [1s, 2s, 3s]
+          retryable_status_codes: [500, 502, 503]
       plugins:
         registry:
           id: registry
@@ -78,6 +82,10 @@ modules:
         maxIdleConnsPerHost: 200
         idleConnTimeout: 300s
         responseHeaderTimeout: 5s
+        retry:
+          max_retries: 3
+          delays: [1s, 2s, 3s]
+          retryable_status_codes: [500, 502, 503]
       plugins:
         registry:
           id: registry
@@ -129,6 +137,10 @@ modules:
         maxIdleConnsPerHost: 200
         idleConnTimeout: 300s
         responseHeaderTimeout: 5s
+        retry:
+          max_retries: 3
+          delays: [1s, 2s, 3s]
+          retryable_status_codes: [500, 502, 503]
       plugins:
         registry:
           id: registry
@@ -179,6 +191,10 @@ modules:
         maxIdleConnsPerHost: 200
         idleConnTimeout: 300s
         responseHeaderTimeout: 5s
+        retry:
+          max_retries: 3
+          delays: [1s, 2s, 3s]
+          retryable_status_codes: [500, 502, 503]
       plugins:
         registry:
           id: registry

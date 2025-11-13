@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httputil"
+	"time"
 
 	"github.com/beckn-one/beckn-onix/pkg/log"
 	"github.com/beckn-one/beckn-onix/pkg/metrics"
@@ -14,6 +15,7 @@ import (
 	"github.com/beckn-one/beckn-onix/pkg/plugin"
 	"github.com/beckn-one/beckn-onix/pkg/plugin/definition"
 	"github.com/beckn-one/beckn-onix/pkg/response"
+	"github.com/hashicorp/go-retryablehttp"
 )
 
 // stdHandler orchestrates the execution of defined processing steps.
@@ -32,7 +34,7 @@ type stdHandler struct {
 	httpClient      *http.Client
 }
 
-// newHTTPClient creates a new HTTP client with a custom transport configuration.
+// newHTTPClient creates a new HTTP client with a custom transport configuration and optional retry logic.
 func newHTTPClient(cfg *HttpClientConfig) *http.Client {
 	// Clone the default transport to inherit its sensible defaults.
 	transport := http.DefaultTransport.(*http.Transport).Clone()
@@ -55,6 +57,54 @@ func newHTTPClient(cfg *HttpClientConfig) *http.Client {
 	// Wrap transport with metrics tracking for outbound requests
 	wrappedTransport := metrics.WrapHTTPTransport(transport)
 
+	// If retry configuration is provided, use retryablehttp
+	if cfg.Retry != nil && cfg.Retry.MaxRetries > 0 {
+		retryClient := retryablehttp.NewClient()
+		retryClient.HTTPClient = &http.Client{Transport: wrappedTransport}
+		retryClient.RetryMax = cfg.Retry.MaxRetries
+
+		// Create a map of retryable status codes for quick lookup
+		retryableStatusCodes := make(map[int]bool)
+		for _, code := range cfg.Retry.RetryableStatusCodes {
+			retryableStatusCodes[code] = true
+		}
+
+		// Custom CheckRetry function to only retry on specified status codes
+		retryClient.CheckRetry = func(ctx context.Context, resp *http.Response, err error) (bool, error) {
+			// Always retry on connection errors
+			if err != nil {
+				return true, nil
+			}
+
+			// Only retry if the status code is in the retryable list
+			if resp != nil && retryableStatusCodes[resp.StatusCode] {
+				return true, nil
+			}
+
+			// Don't retry for other cases
+			return false, nil
+		}
+
+		// Custom Backoff function to use configured delays
+		if len(cfg.Retry.Delays) > 0 {
+			retryClient.Backoff = func(min, max time.Duration, attemptNum int, resp *http.Response) time.Duration {
+				// Use the delay for this attempt (0-indexed), or the last delay if we've exceeded the list
+				delayIndex := attemptNum - 1
+				if delayIndex < 0 {
+					delayIndex = 0
+				}
+				if delayIndex >= len(cfg.Retry.Delays) {
+					delayIndex = len(cfg.Retry.Delays) - 1
+				}
+				return cfg.Retry.Delays[delayIndex]
+			}
+		}
+
+		// Convert retryablehttp.Client to standard http.Client
+		return retryClient.StandardClient()
+	}
+
+	// No retry configuration, return standard client
 	return &http.Client{Transport: wrappedTransport}
 }
 

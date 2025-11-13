@@ -440,6 +440,56 @@ modules:
 **Default**: `5s`  
 **Description**: Time to wait for server response headers.
 
+###### `retry`
+**Type**: `object`  
+**Required**: No  
+**Description**: Configuration for automatic retry of failed HTTP requests. When configured, uses [go-retryablehttp](https://github.com/hashicorp/go-retryablehttp) for retry logic.
+
+**Note**: If `retry` is not configured or `max_retries` is 0, the standard HTTP client without retry logic will be used.
+
+###### `retry.max_retries`
+**Type**: `integer`  
+**Required**: Yes (if `retry` is configured)  
+**Description**: Maximum number of retry attempts. The total number of requests will be `max_retries + 1` (initial attempt + retries).
+
+**Example**: `3` means up to 3 retry attempts (4 total requests).
+
+###### `retry.delays`
+**Type**: `array` of `duration`  
+**Required**: Yes (if `retry` is configured)  
+**Description**: Array of delay durations for each retry attempt. The delay for attempt N will use `delays[N-1]`. If there are more retries than delays, the last delay value is reused.
+
+**Example**: `[1s, 2s, 3s]` means:
+- First retry waits 1 second
+- Second retry waits 2 seconds  
+- Third retry waits 3 seconds
+- Any additional retries wait 3 seconds (reuses last value)
+
+###### `retry.retryable_status_codes`
+**Type**: `array` of `integer`  
+**Required**: Yes (if `retry` is configured)  
+**Description**: HTTP status codes that should trigger a retry. Requests returning these status codes will be automatically retried. Connection errors (network failures, timeouts) are always retried regardless of this configuration.
+
+**Common values**: `[500, 502, 503]` for server errors that may be transient.
+
+**Note**: 
+- Status codes not in this list will not trigger retries (e.g., 404, 401, 403)
+- Connection errors are always retried
+- Successful status codes (2XX) are never retried
+
+**Example**:
+```yaml
+httpClientConfig:
+  maxIdleConns: 1000
+  maxIdleConnsPerHost: 200
+  idleConnTimeout: 300s
+  responseHeaderTimeout: 5s
+  retry:
+    max_retries: 3
+    delays: [1s, 2s, 3s]
+    retryable_status_codes: [500, 502, 503]
+```
+
 ##### `plugins`
 **Type**: `object`  
 **Required**: Yes  
@@ -466,6 +516,29 @@ handler:
     maxIdleConnsPerHost: 200
     idleConnTimeout: 300s
     responseHeaderTimeout: 5s
+    retry:
+      max_retries: 3
+      delays: [1s, 2s, 3s]
+      retryable_status_codes: [500, 502, 503]
+  plugins:
+    # ... plugin configurations
+  steps:
+    - validateSign
+    - addRoute
+    - validateSchema
+```
+
+**Example without retry** (standard HTTP client):
+```yaml
+handler:
+  type: std
+  role: bap
+  httpClientConfig:
+    maxIdleConns: 1000
+    maxIdleConnsPerHost: 200
+    idleConnTimeout: 300s
+    responseHeaderTimeout: 5s
+    # retry not configured - uses standard HTTP client
   plugins:
     # ... plugin configurations
   steps:
@@ -1053,4 +1126,9 @@ modules:
       httpClientConfig:
         maxIdleConns: 1000
         maxIdleConnsPerHost: 200
-        idleConnTimeout: 300
+        idleConnTimeout: 300s
+        responseHeaderTimeout: 5s
+        retry:
+          max_retries: 3
+          delays: [1s, 2s, 3s]
+          retryable_status_codes: [500, 502, 503]

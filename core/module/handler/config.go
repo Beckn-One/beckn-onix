@@ -47,6 +47,18 @@ type PluginCfg struct {
 	Steps           []plugin.Config
 }
 
+// RetryConfig defines the configuration for HTTP request retries.
+type RetryConfig struct {
+	// MaxRetries specifies the maximum number of retry attempts.
+	MaxRetries int `yaml:"max_retries"`
+
+	// Delays specifies the delay durations for each retry attempt.
+	Delays []time.Duration `yaml:"delays"`
+
+	// RetryableStatusCodes specifies the HTTP status codes that should trigger a retry.
+	RetryableStatusCodes []int `yaml:"retryable_status_codes"`
+}
+
 // HttpClientConfig defines the configuration for the HTTP transport layer.
 type HttpClientConfig struct {
 	// MaxIdleConns controls the maximum number of idle (keep-alive)
@@ -64,6 +76,9 @@ type HttpClientConfig struct {
 	// ResponseHeaderTimeout, if non-zero, specifies the amount of time to wait
 	// for a server's response headers after fully writing the request.
 	ResponseHeaderTimeout time.Duration `yaml:"responseHeaderTimeout"`
+
+	// Retry configuration for outbound HTTP requests.
+	Retry *RetryConfig `yaml:"retry,omitempty"`
 }
 
 // Config holds the configuration for request processing handlers.
