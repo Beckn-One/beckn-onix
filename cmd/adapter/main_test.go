@@ -68,6 +68,11 @@ func (m *MockPluginManager) KeyManager(ctx context.Context, cache definition.Cac
 	return nil, nil
 }
 
+// Registry returns a mock implementation of the RegistryLookup interface.
+func (m *MockPluginManager) Registry(ctx context.Context, cfg *plugin.Config) (definition.RegistryLookup, error) {
+	return nil, nil
+}
+
 // SchemaValidator returns a mock implementation of the SchemaValidator interface.
 func (m *MockPluginManager) SchemaValidator(ctx context.Context, cfg *plugin.Config) (definition.SchemaValidator, error) {
 	return nil, nil
