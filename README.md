@@ -64,7 +64,14 @@ The **Beckn Protocol** is an open protocol that enables location-aware, local co
 ### 📊 **Observability**
 - **Structured Logging**: JSON-formatted logs with contextual information
 - **Transaction Tracking**: End-to-end request tracing with unique IDs
-- **Metrics Support**: Performance and business metrics collection
+- **OpenTelemetry Metrics**: Comprehensive metrics collection via OpenTelemetry
+  - HTTP request metrics (duration, size, active requests)
+  - Inbound/outbound request tracking per host
+  - Request validation metrics (sign, schema)
+  - Outbound request status codes (2XX/4XX/5XX) and latency percentiles
+  - Go runtime metrics (CPU, memory, GC, goroutines)
+  - Redis operation metrics (via automatic instrumentation)
+  - Prometheus-compatible `/metrics` endpoint
 - **Health Checks**: Liveness and readiness probes for Kubernetes
 
 ### 🌐 **Multi-Domain Support**
@@ -345,6 +352,15 @@ modules:
 |--------|----------|-------------|
 | POST | `/bpp/receiver/*` | Receives all BAP requests |
 | POST | `/bpp/caller/on_*` | Sends responses back to BAP |
+
+### Observability Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/health` | Health check endpoint |
+| GET | `/metrics` | Prometheus metrics endpoint (when metrics enabled) |
+
+**Note**: The `/metrics` endpoint is only available when `metrics.enabled: true` in the configuration file. It returns metrics in Prometheus format.
 
 ## Documentation
 

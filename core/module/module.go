@@ -7,6 +7,7 @@ import (
 
 	"github.com/beckn-one/beckn-onix/core/module/handler"
 	"github.com/beckn-one/beckn-onix/pkg/log"
+	"github.com/beckn-one/beckn-onix/pkg/metrics"
 	"github.com/beckn-one/beckn-onix/pkg/model"
 )
 
@@ -29,7 +30,7 @@ var handlerProviders = map[handler.Type]Provider{
 // It iterates over the module configurations, retrieves appropriate handler providers,
 // and registers the handlers with the HTTP multiplexer.
 func Register(ctx context.Context, mCfgs []Config, mux *http.ServeMux, mgr handler.PluginManager) error {
-	mux.Handle("/health", http.HandlerFunc(handler.HealthHandler))
+	mux.Handle("/health", metrics.HTTPMiddleware(http.HandlerFunc(handler.HealthHandler), "/health"))
 
 	log.Debugf(ctx, "Registering modules with config: %#v", mCfgs)
 	// Iterate over the handlers in the configuration.
@@ -48,6 +49,8 @@ func Register(ctx context.Context, mCfgs []Config, mux *http.ServeMux, mgr handl
 
 		}
 		h = moduleCtxMiddleware(c.Name, h)
+		// Wrap handler with metrics middleware.
+		h = metrics.HTTPMiddleware(h, c.Path)
 		log.Debugf(ctx, "Registering handler %s, of type %s @ %s", c.Name, c.Handler.Type, c.Path)
 		mux.Handle(c.Path, h)
 	}

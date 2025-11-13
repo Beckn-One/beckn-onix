@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/beckn-one/beckn-onix/pkg/log"
+	"github.com/redis/go-redis/extra/redisotel/v9"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -75,6 +76,20 @@ func New(ctx context.Context, cfg *Config) (*Cache, func() error, error) {
 	if _, err := client.Ping(ctx).Result(); err != nil {
 		log.Errorf(ctx, err, "Failed to ping Redis server")
 		return nil, nil, fmt.Errorf("%w: %v", ErrConnectionFail, err)
+	}
+
+	// Enable OpenTelemetry instrumentation for tracing and metrics
+	// This will automatically collect Redis operation metrics and expose them via /metrics endpoint
+	if redisClient, ok := client.(*redis.Client); ok {
+		if err := redisotel.InstrumentTracing(redisClient); err != nil {
+			// Log error but don't fail - instrumentation is optional
+			log.Debugf(ctx, "Failed to instrument Redis tracing: %v", err)
+		}
+
+		if err := redisotel.InstrumentMetrics(redisClient); err != nil {
+			// Log error but don't fail - instrumentation is optional
+			log.Debugf(ctx, "Failed to instrument Redis metrics: %v", err)
+		}
 	}
 
 	log.Infof(ctx, "Cache connection to Redis established successfully")

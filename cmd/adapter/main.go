@@ -16,6 +16,7 @@ import (
 	"github.com/beckn-one/beckn-onix/core/module"
 	"github.com/beckn-one/beckn-onix/core/module/handler"
 	"github.com/beckn-one/beckn-onix/pkg/log"
+	"github.com/beckn-one/beckn-onix/pkg/metrics"
 	"github.com/beckn-one/beckn-onix/pkg/plugin"
 )
 
@@ -23,6 +24,7 @@ import (
 type Config struct {
 	AppName       string                `yaml:"appName"`
 	Log           log.Config            `yaml:"log"`
+	Metrics       metrics.Config        `yaml:"metrics"`
 	PluginManager *plugin.ManagerConfig `yaml:"pluginManager"`
 	Modules       []module.Config       `yaml:"modules"`
 	HTTP          httpConfig            `yaml:"http"`
@@ -94,6 +96,16 @@ func validateConfig(cfg *Config) error {
 // newServer creates and initializes the HTTP server.
 func newServer(ctx context.Context, mgr handler.PluginManager, cfg *Config) (http.Handler, error) {
 	mux := http.NewServeMux()
+
+	// Register /metrics endpoint if metrics are enabled
+	if metrics.IsEnabled() {
+		metricsHandler := metrics.MetricsHandler()
+		if metricsHandler != nil {
+			mux.Handle("/metrics", metricsHandler)
+			log.Infof(ctx, "Metrics endpoint registered at /metrics")
+		}
+	}
+
 	err := module.Register(ctx, cfg.Modules, mux, mgr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to register modules: %w", err)
@@ -115,6 +127,24 @@ func run(ctx context.Context, configPath string) error {
 	log.Infof(ctx, "Initializing logger with config: %+v", cfg.Log)
 	if err := log.InitLogger(cfg.Log); err != nil {
 		return fmt.Errorf("failed to initialize logger: %w", err)
+	}
+
+	// Initialize metrics.
+	log.Infof(ctx, "Initializing metrics with config: %+v", cfg.Metrics)
+	if err := metrics.InitMetrics(cfg.Metrics); err != nil {
+		return fmt.Errorf("failed to initialize metrics: %w", err)
+	}
+	if err := metrics.InitAllMetrics(); err != nil {
+		return err
+	}
+	if metrics.IsEnabled() {
+		closers = append(closers, func() {
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := metrics.Shutdown(shutdownCtx); err != nil {
+				log.Errorf(ctx, err, "Failed to shutdown metrics: %v", err)
+			}
+		})
 	}
 
 	// Initialize plugin manager.

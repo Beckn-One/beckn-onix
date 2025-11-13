@@ -6,13 +6,14 @@
 3. [Top-Level Configuration](#top-level-configuration)
 4. [HTTP Configuration](#http-configuration)
 5. [Logging Configuration](#logging-configuration)
-6. [Plugin Manager Configuration](#plugin-manager-configuration)
-7. [Module Configuration](#module-configuration)
-8. [Handler Configuration](#handler-configuration)
-9. [Plugin Configuration](#plugin-configuration)
-10. [Routing Configuration](#routing-configuration)
-11. [Deployment Scenarios](#deployment-scenarios)
-12. [Configuration Examples](#configuration-examples)
+6. [Metrics Configuration](#metrics-configuration)
+7. [Plugin Manager Configuration](#plugin-manager-configuration)
+8. [Module Configuration](#module-configuration)
+9. [Handler Configuration](#handler-configuration)
+10. [Plugin Configuration](#plugin-configuration)
+11. [Routing Configuration](#routing-configuration)
+12. [Deployment Scenarios](#deployment-scenarios)
+13. [Configuration Examples](#configuration-examples)
 
 ---
 
@@ -70,6 +71,7 @@ The main configuration file follows this structure:
 ```yaml
 appName: "onix-local"
 log: {...}
+metrics: {...}
 http: {...}
 pluginManager: {...}
 modules: [...]
@@ -184,6 +186,127 @@ log:
     - subscriber_id
     - module_id
 ```
+
+---
+
+## Metrics Configuration
+
+### `metrics`
+**Type**: `object`  
+**Required**: No  
+**Description**: OpenTelemetry metrics configuration for observability and monitoring.
+
+**Important**: When `enabled: true`, metrics are automatically exposed at the `/metrics` endpoint in Prometheus format. This allows Prometheus or any HTTP client to scrape metrics directly from the application.
+
+#### Parameters:
+
+##### `enabled`
+**Type**: `boolean`  
+**Required**: No  
+**Default**: `false`  
+**Description**: Enable or disable metrics collection. When enabled:
+- Metrics are collected automatically
+- Metrics are exposed at `/metrics` endpoint in Prometheus format
+- All metrics subsystems are initialized (request metrics, runtime metrics)
+
+When disabled, no metrics are collected and the `/metrics` endpoint is not available.
+
+##### `exporterType`
+**Type**: `string`  
+**Required**: Yes (if `enabled` is `true`)  
+**Options**: `prometheus`  
+**Default**: `prometheus`  
+**Description**: Metrics exporter type. Currently only `prometheus` is supported, which exposes metrics at the `/metrics` endpoint.
+
+**Note**: The `/metrics` endpoint is always available when `enabled: true`.
+
+##### `serviceName`
+**Type**: `string`  
+**Required**: No  
+**Default**: `"beckn-onix"`  
+**Description**: Service name used in metrics resource attributes. Helps identify the service in observability platforms.
+
+##### `serviceVersion`
+**Type**: `string`  
+**Required**: No  
+**Description**: Service version used in metrics resource attributes. Useful for tracking different versions of the service.
+
+##### `prometheus`
+**Type**: `object`  
+**Required**: No  
+**Description**: Prometheus exporter configuration (reserved for future use).
+
+**Example - Enable Metrics**:
+```yaml
+metrics:
+  enabled: true
+  exporterType: prometheus
+  serviceName: beckn-onix
+  serviceVersion: "1.0.0"
+```
+**Note**: Metrics are available at `/metrics` endpoint in Prometheus format.
+
+**Example - Disabled Metrics**:
+```yaml
+metrics:
+  enabled: false
+```
+**Note**: No metrics are collected and `/metrics` endpoint is not available.
+
+### Accessing Metrics
+
+When `metrics.enabled: true`, metrics are automatically available at:
+
+```
+http://your-server:port/metrics
+```
+
+The endpoint returns metrics in Prometheus format and can be:
+- Scraped by Prometheus
+- Accessed via `curl http://localhost:8081/metrics`
+- Viewed in a web browser
+
+### Metrics Collected
+
+The adapter automatically collects the following metrics:
+
+#### HTTP Metrics (Automatic via OpenTelemetry HTTP Middleware)
+- `http.server.duration` - Request duration histogram
+- `http.server.request.size` - Request body size
+- `http.server.response.size` - Response body size
+- `http.server.active_requests` - Active request counter
+
+#### Request Metrics (Automatic)
+**Inbound Requests:**
+- `beckn.inbound.requests.total` - Total inbound requests per host
+- `beckn.inbound.sign_validation.total` - Requests with sign validation per host
+- `beckn.inbound.schema_validation.total` - Requests with schema validation per host
+
+**Outbound Requests:**
+- `beckn.outbound.requests.total` - Total outbound requests per host
+- `beckn.outbound.requests.2xx` - 2XX responses per host
+- `beckn.outbound.requests.4xx` - 4XX responses per host
+- `beckn.outbound.requests.5xx` - 5XX responses per host
+- `beckn.outbound.request.duration` - Request duration histogram (supports p99, p95, p75 percentiles) per host
+
+#### Go Runtime Metrics (Automatic)
+- `go_cpu_*` - CPU usage metrics
+- `go_memstats_*` - Memory allocation and heap statistics
+- `go_memstats_gc_*` - Garbage collection statistics
+- `go_goroutines` - Goroutine count
+
+#### Redis Metrics (Automatic via redisotel)
+- `redis_commands_duration_seconds` - Redis command duration
+- `redis_commands_total` - Total Redis commands
+- `redis_connections_active` - Active Redis connections
+- Additional Redis-specific metrics
+
+All metrics include relevant attributes (labels) such as:
+- `host` - Request hostname
+- `status_code` - HTTP status code
+- `operation` - HTTP operation name
+- `service.name` - Service identifier
+- `service.version` - Service version
 
 ---
 
@@ -774,6 +897,7 @@ routingRules:
 - Embedded Ed25519 keys
 - Local Redis
 - Simplified routing
+- Optional metrics collection (available at `/metrics` when enabled)
 
 **Use Case**: Quick local development and testing
 
@@ -781,6 +905,10 @@ routingRules:
 appName: "onix-local"
 log:
   level: debug
+metrics:
+  enabled: true
+  exporterType: prometheus
+  serviceName: onix-local
 http:
   port: 8081
 modules:
@@ -791,6 +919,8 @@ modules:
           id: simplekeymanager
           config: {}
 ```
+
+**Metrics Access**: When enabled, access metrics at `http://localhost:8081/metrics`
 
 ### 2. Local Development (Vault Mode)
 
@@ -825,10 +955,21 @@ modules:
 - Production Redis
 - Remote plugin loading
 - Pub/Sub integration
+- OpenTelemetry metrics enabled (available at `/metrics` endpoint)
 
 **Use Case**: Single deployment serving both roles
 
 ```yaml
+appName: "onix-production"
+log:
+  level: info
+  destinations:
+    - type: stdout
+metrics:
+  enabled: true
+  exporterType: prometheus
+  serviceName: beckn-onix
+  serviceVersion: "1.0.0"
 pluginManager:
   root: /app/plugins
   remoteRoot: /mnt/gcs/plugins/plugins_bundle.zip
@@ -850,6 +991,9 @@ modules:
             project: ${projectID}
             topic: bapNetworkReciever
 ```
+
+**Metrics Access**: 
+- Prometheus scraping: `http://your-server:port/metrics`
 
 ### 4. Production BAP-Only Mode
 
