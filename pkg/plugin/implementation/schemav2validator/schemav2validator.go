@@ -31,8 +31,9 @@ type schemav2Validator struct {
 
 // cachedSpec holds a cached OpenAPI spec.
 type cachedSpec struct {
-	doc      *openapi3.T
-	loadedAt time.Time
+	doc           *openapi3.T
+	actionSchemas map[string]*openapi3.SchemaRef // O(1) action lookup
+	loadedAt      time.Time
 }
 
 // Config struct for Schemav2Validator.
@@ -95,40 +96,14 @@ func (v *schemav2Validator) Validate(ctx context.Context, reqURL *url.URL, data 
 	}
 
 	action := payloadData.Context.Action
-	var schema *openapi3.SchemaRef
-	var matchedPath string
 
-	// Search all spec paths for matching action in schema
-	for path, item := range spec.doc.Paths.Map() {
-		if item == nil {
-			continue
-		}
-		// Check all HTTP methods for this path
-		for _, op := range []*openapi3.Operation{item.Post, item.Get, item.Put, item.Patch, item.Delete} {
-			if op == nil || op.RequestBody == nil || op.RequestBody.Value == nil {
-				continue
-			}
-			content := op.RequestBody.Value.Content.Get("application/json")
-			if content == nil || content.Schema == nil || content.Schema.Value == nil {
-				continue
-			}
-			// Check if schema has action constraint matching our action
-			if v.schemaMatchesAction(content.Schema.Value, action) {
-				schema = content.Schema
-				matchedPath = path
-				break
-			}
-		}
-		if schema != nil {
-			break
-		}
-	}
-
+	// O(1) lookup from action index
+	schema := spec.actionSchemas[action]
 	if schema == nil || schema.Value == nil {
 		return model.NewBadReqErr(fmt.Errorf("unsupported action: %s", action))
 	}
 
-	log.Debugf(ctx, "Validating action: %s, matched path: %s", action, matchedPath)
+	log.Debugf(ctx, "Validating action: %s", action)
 
 	var jsonData any
 	if err := json.Unmarshal(data, &jsonData); err != nil {
@@ -190,14 +165,18 @@ func (v *schemav2Validator) loadSpec(ctx context.Context) error {
 		log.Debugf(ctx, "Spec validation passed")
 	}
 
+	// Build action→schema index for O(1) lookup
+	actionSchemas := v.buildActionIndex(ctx, doc)
+
 	v.specMutex.Lock()
 	v.spec = &cachedSpec{
-		doc:      doc,
-		loadedAt: time.Now(),
+		doc:           doc,
+		actionSchemas: actionSchemas,
+		loadedAt:      time.Now(),
 	}
 	v.specMutex.Unlock()
 
-	log.Debugf(ctx, "Loaded OpenAPI spec from %s: %s", v.config.Type, v.config.Location)
+	log.Debugf(ctx, "Loaded OpenAPI spec from %s: %s with %d actions indexed", v.config.Type, v.config.Location, len(actionSchemas))
 	return nil
 }
 
@@ -283,12 +262,42 @@ func (v *schemav2Validator) extractSchemaErrors(err error, schemaErrors *[]model
 	}
 }
 
-// schemaMatchesAction checks if a schema has an action constraint matching the given action.
-func (v *schemav2Validator) schemaMatchesAction(schema *openapi3.Schema, action string) bool {
+// buildActionIndex builds a map of action→schema for O(1) lookup.
+func (v *schemav2Validator) buildActionIndex(ctx context.Context, doc *openapi3.T) map[string]*openapi3.SchemaRef {
+	actionSchemas := make(map[string]*openapi3.SchemaRef)
+
+	for path, item := range doc.Paths.Map() {
+		if item == nil {
+			continue
+		}
+		// Check all HTTP methods
+		for _, op := range []*openapi3.Operation{item.Post, item.Get, item.Put, item.Patch, item.Delete} {
+			if op == nil || op.RequestBody == nil || op.RequestBody.Value == nil {
+				continue
+			}
+			content := op.RequestBody.Value.Content.Get("application/json")
+			if content == nil || content.Schema == nil || content.Schema.Value == nil {
+				continue
+			}
+
+			// Extract action from schema
+			action := v.extractActionFromSchema(content.Schema.Value)
+			if action != "" {
+				actionSchemas[action] = content.Schema
+				log.Debugf(ctx, "Indexed action '%s' from path %s", action, path)
+			}
+		}
+	}
+
+	return actionSchemas
+}
+
+// extractActionFromSchema extracts the action value from a schema.
+func (v *schemav2Validator) extractActionFromSchema(schema *openapi3.Schema) string {
 	// Check direct properties
 	if ctxProp := schema.Properties["context"]; ctxProp != nil && ctxProp.Value != nil {
-		if v.checkActionEnum(ctxProp.Value, action) {
-			return true
+		if action := v.getActionValue(ctxProp.Value); action != "" {
+			return action
 		}
 	}
 
@@ -296,32 +305,29 @@ func (v *schemav2Validator) schemaMatchesAction(schema *openapi3.Schema, action 
 	for _, allOfSchema := range schema.AllOf {
 		if allOfSchema.Value != nil {
 			if ctxProp := allOfSchema.Value.Properties["context"]; ctxProp != nil && ctxProp.Value != nil {
-				if v.checkActionEnum(ctxProp.Value, action) {
-					return true
+				if action := v.getActionValue(ctxProp.Value); action != "" {
+					return action
 				}
 			}
 		}
 	}
 
-	return false
+	return ""
 }
 
-// checkActionEnum checks if a context schema has action enum or const matching the given action.
-func (v *schemav2Validator) checkActionEnum(contextSchema *openapi3.Schema, action string) bool {
-	// Check direct action property
+// getActionValue extracts action value from context schema.
+func (v *schemav2Validator) getActionValue(contextSchema *openapi3.Schema) string {
 	if actionProp := contextSchema.Properties["action"]; actionProp != nil && actionProp.Value != nil {
-		// Check const field (stored in Extensions by kin-openapi)
+		// Check const field
 		if constVal, ok := actionProp.Value.Extensions["const"]; ok {
-			if constVal == action {
-				return true
+			if action, ok := constVal.(string); ok {
+				return action
 			}
 		}
-		// Check enum field
+		// Check enum field (return first value)
 		if len(actionProp.Value.Enum) > 0 {
-			for _, e := range actionProp.Value.Enum {
-				if e == action {
-					return true
-				}
+			if action, ok := actionProp.Value.Enum[0].(string); ok {
+				return action
 			}
 		}
 	}
@@ -329,28 +335,11 @@ func (v *schemav2Validator) checkActionEnum(contextSchema *openapi3.Schema, acti
 	// Check allOf in context
 	for _, allOfSchema := range contextSchema.AllOf {
 		if allOfSchema.Value != nil {
-			if actionProp := allOfSchema.Value.Properties["action"]; actionProp != nil && actionProp.Value != nil {
-				// Check const field (stored in Extensions by kin-openapi)
-				if constVal, ok := actionProp.Value.Extensions["const"]; ok {
-					if constVal == action {
-						return true
-					}
-				}
-				// Check enum field
-				if len(actionProp.Value.Enum) > 0 {
-					for _, e := range actionProp.Value.Enum {
-						if e == action {
-							return true
-						}
-					}
-				}
-			}
-			// Recursively check nested allOf
-			if v.checkActionEnum(allOfSchema.Value, action) {
-				return true
+			if action := v.getActionValue(allOfSchema.Value); action != "" {
+				return action
 			}
 		}
 	}
 
-	return false
+	return ""
 }
