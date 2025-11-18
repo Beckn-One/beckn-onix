@@ -479,7 +479,38 @@ schemaValidator:
 
 ---
 
-#### 5. Sign Validator Plugin
+#### 5. Schema2Validator Plugin
+
+**Purpose**: Validate requests against OpenAPI 3.x specifications with action-based matching.
+
+```yaml
+schemaValidator:
+  id: schemav2validator
+  config:
+    type: url
+    location: https://raw.githubusercontent.com/beckn/protocol-specifications-new/refs/heads/draft/api-specs/beckn-protocol-api.yaml
+    cacheTTL: "3600"
+```
+
+**Or for local files:**
+
+```yaml
+schemaValidator:
+  id: schemav2validator
+  config:
+    type: file
+    location: ./validation-scripts/l2-config/mobility_1.1.0_openapi_3.1.yaml
+    cacheTTL: "3600"
+```
+
+**Parameters**:
+- `type`: Source type - `"url"` for remote specs, `"file"` for local files
+- `location`: URL or file path to OpenAPI 3.1 specification
+- `cacheTTL`: Cache TTL in seconds before reloading spec (default: `"3600"`)
+
+---
+
+#### 6. Sign Validator Plugin
 
 **Purpose**: Validate Ed25519 digital signatures on incoming requests.
 
@@ -492,7 +523,7 @@ signValidator:
 
 ---
 
-#### 6. Router Plugin
+#### 7. Router Plugin
 
 **Purpose**: Determine routing destination based on rules.
 
@@ -517,7 +548,7 @@ router:
 
 ---
 
-#### 7. Signer Plugin
+#### 8. Signer Plugin
 
 **Purpose**: Sign outgoing requests with Ed25519 signature.
 
@@ -530,7 +561,7 @@ signer:
 
 ---
 
-#### 8. Publisher Plugin
+#### 9. Publisher Plugin
 
 **Purpose**: Publish messages to RabbitMQ or Pub/Sub for asynchronous processing.
 
@@ -548,7 +579,7 @@ publisher:
 
 ---
 
-#### 9. Middleware Plugin
+#### 10. Middleware Plugin
 
 **Purpose**: Request preprocessing like UUID generation and header manipulation.
 

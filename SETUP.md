@@ -830,6 +830,28 @@ schemaValidator:
     schemaURL: https://schemas.beckn.org
 ```
 
+#### Schema2Validator Plugin
+
+**Remote URL Configuration:**
+```yaml
+schemaValidator:
+  id: schemav2validator
+  config:
+    type: url
+    location: https://raw.githubusercontent.com/beckn/protocol-specifications-new/refs/heads/draft/api-specs/beckn-protocol-api.yaml
+    cacheTTL: "3600"
+```
+
+**Local File Configuration:**
+```yaml
+schemaValidator:
+  id: schemav2validator
+  config:
+    type: file
+    location: ./schemas/beckn-protocol-api.yaml
+    cacheTTL: "3600"
+```
+
 #### Router Plugin
 ```yaml
 router:
