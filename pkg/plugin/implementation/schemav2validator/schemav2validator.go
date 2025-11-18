@@ -112,7 +112,6 @@ func (v *schemav2Validator) Validate(ctx context.Context, reqURL *url.URL, data 
 
 	opts := []openapi3.SchemaValidationOption{
 		openapi3.VisitAsRequest(),
-		openapi3.MultiErrors(),
 		openapi3.EnableFormatValidation(),
 	}
 	if err := schema.Value.VisitJSON(jsonData, opts...); err != nil {
@@ -233,21 +232,39 @@ func (v *schemav2Validator) formatValidationError(err error) error {
 // extractSchemaErrors recursively extracts detailed error information from SchemaError.
 func (v *schemav2Validator) extractSchemaErrors(err error, schemaErrors *[]model.Error) {
 	if schemaErr, ok := err.(*openapi3.SchemaError); ok {
-		// If there's an origin error, recursively extract from it
-		if schemaErr.Origin != nil {
-			v.extractSchemaErrors(schemaErr.Origin, schemaErrors)
-		} else {
-			// Leaf error - extract the actual validation failure
-			pathParts := schemaErr.JSONPointer()
-			path := strings.Join(pathParts, "/")
-			if path == "" {
-				path = schemaErr.SchemaField
-			}
-			*schemaErrors = append(*schemaErrors, model.Error{
-				Paths:   path,
-				Message: schemaErr.Reason,
-			})
+		// Extract path from current error and message from Origin if available
+		pathParts := schemaErr.JSONPointer()
+		path := strings.Join(pathParts, "/")
+		if path == "" {
+			path = schemaErr.SchemaField
 		}
+
+		message := schemaErr.Reason
+		if schemaErr.Origin != nil {
+			originMsg := schemaErr.Origin.Error()
+			// Extract specific field error from nested message
+			if strings.Contains(originMsg, "Error at \"/") {
+				// Find last "Error at" which has the specific field error
+				parts := strings.Split(originMsg, "Error at \"")
+				if len(parts) > 1 {
+					lastPart := parts[len(parts)-1]
+					// Extract field path and update both path and message
+					if idx := strings.Index(lastPart, "\":"); idx > 0 {
+						fieldPath := lastPart[:idx]
+						fieldMsg := strings.TrimSpace(lastPart[idx+2:])
+						path = strings.TrimPrefix(fieldPath, "/")
+						message = fieldMsg
+					}
+				}
+			} else {
+				message = originMsg
+			}
+		}
+
+		*schemaErrors = append(*schemaErrors, model.Error{
+			Paths:   path,
+			Message: message,
+		})
 	} else if multiErr, ok := err.(openapi3.MultiError); ok {
 		// Nested MultiError
 		for _, e := range multiErr {
