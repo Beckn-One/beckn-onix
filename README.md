@@ -64,15 +64,27 @@ The **Beckn Protocol** is an open protocol that enables location-aware, local co
 ### 📊 **Observability**
 - **Structured Logging**: JSON-formatted logs with contextual information
 - **Transaction Tracking**: End-to-end request tracing with unique IDs
-- **OpenTelemetry Metrics**: Comprehensive metrics collection via OpenTelemetry
-  - HTTP request metrics (duration, size, active requests)
-  - Inbound/outbound request tracking per host
-  - Request validation metrics (sign, schema)
-  - Outbound request status codes (2XX/4XX/5XX) and latency percentiles
-  - Go runtime metrics (CPU, memory, GC, goroutines)
-  - Redis operation metrics (via automatic instrumentation)
-  - Prometheus-compatible `/metrics` endpoint
+- **OpenTelemetry Metrics**: Pull-based metrics exposed via `/metrics`
+  - RED metrics for every module and action (rate, errors, duration)
+  - Per-step histograms with error attribution
+  - Cache, routing, plugin, and business KPIs (signature/schema validations, Beckn messages)
+  - Native Prometheus exporter with Grafana dashboards & alert rules (`monitoring/`)
+- **Runtime Instrumentation**: Go runtime + Redis client metrics baked in
 - **Health Checks**: Liveness and readiness probes for Kubernetes
+
+#### Monitoring Quick Start
+```bash
+./install/build-plugins.sh
+go build -o beckn-adapter ./cmd/adapter
+./beckn-adapter --config=config/local-simple.yaml
+cd monitoring && docker-compose -f docker-compose-monitoring.yml up -d
+open http://localhost:3000 # Grafana (admin/admin)
+```
+Resources:
+- `monitoring/prometheus.yml` – scrape config
+- `monitoring/prometheus-alerts.yml` – alert rules (RED, cache, step, plugin)
+- `monitoring/grafana/dashboards/beckn-onix-overview.json` – curated dashboard
+- `docs/METRICS_RUNBOOK.md` – runbook with PromQL recipes & troubleshooting
 
 ### 🌐 **Multi-Domain Support**
 - **Retail & E-commerce**: Product search, order management, fulfillment tracking
@@ -358,9 +370,9 @@ modules:
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/health` | Health check endpoint |
-| GET | `/metrics` | Prometheus metrics endpoint (when metrics enabled) |
+| GET | `/metrics` | Prometheus metrics endpoint (when telemetry is enabled) |
 
-**Note**: The `/metrics` endpoint is only available when `metrics.enabled: true` in the configuration file. It returns metrics in Prometheus format.
+**Note**: The `/metrics` endpoint is available when `telemetry.enableMetrics: true` in the configuration file. It returns metrics in Prometheus format.
 
 ## Documentation
 

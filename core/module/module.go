@@ -7,7 +7,6 @@ import (
 
 	"github.com/beckn-one/beckn-onix/core/module/handler"
 	"github.com/beckn-one/beckn-onix/pkg/log"
-	"github.com/beckn-one/beckn-onix/pkg/metrics"
 	"github.com/beckn-one/beckn-onix/pkg/model"
 )
 
@@ -19,7 +18,7 @@ type Config struct {
 }
 
 // Provider represents a function that initializes an HTTP handler using a PluginManager.
-type Provider func(ctx context.Context, mgr handler.PluginManager, cfg *handler.Config) (http.Handler, error)
+type Provider func(ctx context.Context, mgr handler.PluginManager, cfg *handler.Config, moduleName string) (http.Handler, error)
 
 // handlerProviders maintains a mapping of handler types to their respective providers.
 var handlerProviders = map[handler.Type]Provider{
@@ -30,8 +29,6 @@ var handlerProviders = map[handler.Type]Provider{
 // It iterates over the module configurations, retrieves appropriate handler providers,
 // and registers the handlers with the HTTP multiplexer.
 func Register(ctx context.Context, mCfgs []Config, mux *http.ServeMux, mgr handler.PluginManager) error {
-	mux.Handle("/health", metrics.HTTPMiddleware(http.HandlerFunc(handler.HealthHandler), "/health"))
-
 	log.Debugf(ctx, "Registering modules with config: %#v", mCfgs)
 	// Iterate over the handlers in the configuration.
 	for _, c := range mCfgs {
@@ -39,7 +36,7 @@ func Register(ctx context.Context, mCfgs []Config, mux *http.ServeMux, mgr handl
 		if !ok {
 			return fmt.Errorf("invalid module : %s", c.Name)
 		}
-		h, err := rmp(ctx, mgr, &c.Handler)
+		h, err := rmp(ctx, mgr, &c.Handler, c.Name)
 		if err != nil {
 			return fmt.Errorf("%s : %w", c.Name, err)
 		}
@@ -49,8 +46,6 @@ func Register(ctx context.Context, mCfgs []Config, mux *http.ServeMux, mgr handl
 
 		}
 		h = moduleCtxMiddleware(c.Name, h)
-		// Wrap handler with metrics middleware.
-		h = metrics.HTTPMiddleware(h, c.Path)
 		log.Debugf(ctx, "Registering handler %s, of type %s @ %s", c.Name, c.Handler.Type, c.Path)
 		mux.Handle(c.Path, h)
 	}

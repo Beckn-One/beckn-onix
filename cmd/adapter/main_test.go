@@ -15,6 +15,7 @@ import (
 	"github.com/beckn-one/beckn-onix/core/module/handler"
 	"github.com/beckn-one/beckn-onix/pkg/plugin"
 	"github.com/beckn-one/beckn-onix/pkg/plugin/definition"
+	"github.com/beckn-one/beckn-onix/pkg/telemetry"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -119,7 +120,7 @@ func TestRunSuccess(t *testing.T) {
 	defer func() { newManagerFunc = originalNewManager }()
 
 	originalNewServer := newServerFunc
-	newServerFunc = func(ctx context.Context, mgr handler.PluginManager, cfg *Config) (http.Handler, error) {
+	newServerFunc = func(ctx context.Context, mgr handler.PluginManager, cfg *Config, provider *telemetry.Provider) (http.Handler, error) {
 		return http.NewServeMux(), nil
 	}
 	defer func() { newServerFunc = originalNewServer }()
@@ -177,7 +178,7 @@ func TestRunFailure(t *testing.T) {
 			defer func() { newManagerFunc = originalNewManager }()
 
 			originalNewServer := newServerFunc
-			newServerFunc = func(ctx context.Context, mgr handler.PluginManager, cfg *Config) (http.Handler, error) {
+			newServerFunc = func(ctx context.Context, mgr handler.PluginManager, cfg *Config, provider *telemetry.Provider) (http.Handler, error) {
 				return tt.mockServer(ctx, mgr, cfg)
 			}
 			defer func() { newServerFunc = originalNewServer }()
@@ -308,7 +309,7 @@ func TestNewServerSuccess(t *testing.T) {
 				},
 			}
 
-			handler, err := newServer(context.Background(), mockMgr, cfg)
+			handler, err := newServer(context.Background(), mockMgr, cfg, nil)
 
 			if err != nil {
 				t.Errorf("Expected no error, but got: %v", err)
@@ -353,7 +354,7 @@ func TestNewServerFailure(t *testing.T) {
 				},
 			}
 
-			handler, err := newServer(context.Background(), mockMgr, cfg)
+			handler, err := newServer(context.Background(), mockMgr, cfg, nil)
 
 			if err == nil {
 				t.Errorf("Expected an error, but got nil")

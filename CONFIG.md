@@ -189,124 +189,69 @@ log:
 
 ---
 
-## Metrics Configuration
+## Telemetry Configuration
 
-### `metrics`
+### `telemetry`
 **Type**: `object`  
 **Required**: No  
-**Description**: OpenTelemetry metrics configuration for observability and monitoring.
+**Description**: OpenTelemetry configuration controlling whether the Prometheus exporter is enabled.
 
-**Important**: When `enabled: true`, metrics are automatically exposed at the `/metrics` endpoint in Prometheus format. This allows Prometheus or any HTTP client to scrape metrics directly from the application.
+**Important**: The `/metrics` endpoint is only exposed when `enableMetrics: true`.
 
 #### Parameters:
 
-##### `enabled`
+##### `enableMetrics`
 **Type**: `boolean`  
 **Required**: No  
 **Default**: `false`  
-**Description**: Enable or disable metrics collection. When enabled:
-- Metrics are collected automatically
-- Metrics are exposed at `/metrics` endpoint in Prometheus format
-- All metrics subsystems are initialized (request metrics, runtime metrics)
-
-When disabled, no metrics are collected and the `/metrics` endpoint is not available.
-
-##### `exporterType`
-**Type**: `string`  
-**Required**: Yes (if `enabled` is `true`)  
-**Options**: `prometheus`  
-**Default**: `prometheus`  
-**Description**: Metrics exporter type. Currently only `prometheus` is supported, which exposes metrics at the `/metrics` endpoint.
-
-**Note**: The `/metrics` endpoint is always available when `enabled: true`.
+**Description**: Enables metrics collection and the `/metrics` endpoint.
 
 ##### `serviceName`
 **Type**: `string`  
 **Required**: No  
 **Default**: `"beckn-onix"`  
-**Description**: Service name used in metrics resource attributes. Helps identify the service in observability platforms.
+**Description**: Sets the `service.name` resource attribute.
 
 ##### `serviceVersion`
 **Type**: `string`  
 **Required**: No  
-**Description**: Service version used in metrics resource attributes. Useful for tracking different versions of the service.
+**Description**: Sets the `service.version` resource attribute.
 
-##### `prometheus`
-**Type**: `object`  
+##### `environment`
+**Type**: `string`  
 **Required**: No  
-**Description**: Prometheus exporter configuration (reserved for future use).
+**Default**: `"development"`  
+**Description**: Sets the `deployment.environment` attribute (e.g., `development`, `staging`, `production`).
 
 **Example - Enable Metrics**:
 ```yaml
-metrics:
-  enabled: true
-  exporterType: prometheus
+telemetry:
+  enableMetrics: true
   serviceName: beckn-onix
   serviceVersion: "1.0.0"
+  environment: "development"
 ```
-**Note**: Metrics are available at `/metrics` endpoint in Prometheus format.
-
-**Example - Disabled Metrics**:
-```yaml
-metrics:
-  enabled: false
-```
-**Note**: No metrics are collected and `/metrics` endpoint is not available.
 
 ### Accessing Metrics
 
-When `metrics.enabled: true`, metrics are automatically available at:
+When `telemetry.enableMetrics: true`, scrape metrics at:
 
 ```
 http://your-server:port/metrics
 ```
 
-The endpoint returns metrics in Prometheus format and can be:
-- Scraped by Prometheus
-- Accessed via `curl http://localhost:8081/metrics`
-- Viewed in a web browser
-
 ### Metrics Collected
 
-The adapter automatically collects the following metrics:
+- `http_server_requests_total`, `http_server_request_duration_seconds`, `http_server_requests_in_flight`
+- `http_server_request_size_bytes`, `http_server_response_size_bytes`
+- `onix_step_executions_total`, `onix_step_execution_duration_seconds`, `onix_step_errors_total`
+- `onix_plugin_execution_duration_seconds`, `onix_plugin_errors_total`
+- `beckn_messages_total`, `beckn_signature_validations_total`, `beckn_schema_validations_total`
+- `onix_routing_decisions_total`
+- `onix_cache_operations_total`, `onix_cache_hits_total`, `onix_cache_misses_total`
+- Go runtime metrics (`go_*`) and Redis instrumentation via `redisotel`
 
-#### HTTP Metrics (Automatic via OpenTelemetry HTTP Middleware)
-- `http.server.duration` - Request duration histogram
-- `http.server.request.size` - Request body size
-- `http.server.response.size` - Response body size
-- `http.server.active_requests` - Active request counter
-
-#### Request Metrics (Automatic)
-**Inbound Requests:**
-- `beckn.inbound.requests.total` - Total inbound requests per host
-- `beckn.inbound.sign_validation.total` - Requests with sign validation per host
-- `beckn.inbound.schema_validation.total` - Requests with schema validation per host
-
-**Outbound Requests:**
-- `beckn.outbound.requests.total` - Total outbound requests per host
-- `beckn.outbound.requests.2xx` - 2XX responses per host
-- `beckn.outbound.requests.4xx` - 4XX responses per host
-- `beckn.outbound.requests.5xx` - 5XX responses per host
-- `beckn.outbound.request.duration` - Request duration histogram (supports p99, p95, p75 percentiles) per host
-
-#### Go Runtime Metrics (Automatic)
-- `go_cpu_*` - CPU usage metrics
-- `go_memstats_*` - Memory allocation and heap statistics
-- `go_memstats_gc_*` - Garbage collection statistics
-- `go_goroutines` - Goroutine count
-
-#### Redis Metrics (Automatic via redisotel)
-- `redis_commands_duration_seconds` - Redis command duration
-- `redis_commands_total` - Total Redis commands
-- `redis_connections_active` - Active Redis connections
-- Additional Redis-specific metrics
-
-All metrics include relevant attributes (labels) such as:
-- `host` - Request hostname
-- `status_code` - HTTP status code
-- `operation` - HTTP operation name
-- `service.name` - Service identifier
-- `service.version` - Service version
+Each metric includes consistent labels such as `module`, `role`, `action`, `status`, `step`, `plugin_id`, and `schema_version` to enable low-cardinality dashboards.
 
 ---
 

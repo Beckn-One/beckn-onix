@@ -16,15 +16,15 @@ import (
 	"github.com/beckn-one/beckn-onix/core/module"
 	"github.com/beckn-one/beckn-onix/core/module/handler"
 	"github.com/beckn-one/beckn-onix/pkg/log"
-	"github.com/beckn-one/beckn-onix/pkg/metrics"
 	"github.com/beckn-one/beckn-onix/pkg/plugin"
+	"github.com/beckn-one/beckn-onix/pkg/telemetry"
 )
 
 // Config struct holds all configurations.
 type Config struct {
 	AppName       string                `yaml:"appName"`
 	Log           log.Config            `yaml:"log"`
-	Metrics       metrics.Config        `yaml:"metrics"`
+	Telemetry     telemetry.Config      `yaml:"telemetry"`
 	PluginManager *plugin.ManagerConfig `yaml:"pluginManager"`
 	Modules       []module.Config       `yaml:"modules"`
 	HTTP          httpConfig            `yaml:"http"`
@@ -94,20 +94,16 @@ func validateConfig(cfg *Config) error {
 }
 
 // newServer creates and initializes the HTTP server.
-func newServer(ctx context.Context, mgr handler.PluginManager, cfg *Config) (http.Handler, error) {
+func newServer(ctx context.Context, mgr handler.PluginManager, cfg *Config, otelProvider *telemetry.Provider) (http.Handler, error) {
 	mux := http.NewServeMux()
+	mux.HandleFunc("/health", handler.HealthHandler)
 
-	// Register /metrics endpoint if metrics are enabled
-	if metrics.IsEnabled() {
-		metricsHandler := metrics.MetricsHandler()
-		if metricsHandler != nil {
-			mux.Handle("/metrics", metricsHandler)
+	if otelProvider != nil && otelProvider.MetricsHandler != nil {
+		mux.Handle("/metrics", otelProvider.MetricsHandler)
 			log.Infof(ctx, "Metrics endpoint registered at /metrics")
-		}
 	}
 
-	err := module.Register(ctx, cfg.Modules, mux, mgr)
-	if err != nil {
+	if err := module.Register(ctx, cfg.Modules, mux, mgr); err != nil {
 		return nil, fmt.Errorf("failed to register modules: %w", err)
 	}
 	return mux, nil
@@ -129,20 +125,18 @@ func run(ctx context.Context, configPath string) error {
 		return fmt.Errorf("failed to initialize logger: %w", err)
 	}
 
-	// Initialize metrics.
-	log.Infof(ctx, "Initializing metrics with config: %+v", cfg.Metrics)
-	if err := metrics.InitMetrics(cfg.Metrics); err != nil {
-		return fmt.Errorf("failed to initialize metrics: %w", err)
+	// Initialize telemetry.
+	log.Infof(ctx, "Initializing telemetry with config: %+v", cfg.Telemetry)
+	otelProvider, err := telemetry.NewProvider(ctx, &cfg.Telemetry)
+	if err != nil {
+		return fmt.Errorf("failed to initialize telemetry: %w", err)
 	}
-	if err := metrics.InitAllMetrics(); err != nil {
-		return err
-	}
-	if metrics.IsEnabled() {
+	if otelProvider != nil && otelProvider.Shutdown != nil {
 		closers = append(closers, func() {
 			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			if err := metrics.Shutdown(shutdownCtx); err != nil {
-				log.Errorf(ctx, err, "Failed to shutdown metrics: %v", err)
+			if err := otelProvider.Shutdown(shutdownCtx); err != nil {
+				log.Errorf(ctx, err, "Failed to shutdown telemetry: %v", err)
 			}
 		})
 	}
@@ -158,7 +152,7 @@ func run(ctx context.Context, configPath string) error {
 
 	// Initialize HTTP server.
 	log.Infof(ctx, "Initializing HTTP server")
-	srv, err := newServerFunc(ctx, mgr, cfg)
+	srv, err := newServerFunc(ctx, mgr, cfg, otelProvider)
 	if err != nil {
 		return fmt.Errorf("failed to initialize server: %w", err)
 	}

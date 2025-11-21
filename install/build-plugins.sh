@@ -16,6 +16,7 @@ plugins=(
     "registry"
     "dediregistry"
     "reqpreprocessor"
+    "otelmetrics"
     "router"
     "schemavalidator"
     "signer"

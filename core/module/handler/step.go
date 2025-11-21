@@ -2,13 +2,17 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
+	"go.opentelemetry.io/otel/metric"
+
 	"github.com/beckn-one/beckn-onix/pkg/log"
 	"github.com/beckn-one/beckn-onix/pkg/model"
 	"github.com/beckn-one/beckn-onix/pkg/plugin/definition"
+	"github.com/beckn-one/beckn-onix/pkg/telemetry"
 )
 
 // signStep represents the signing step in the processing pipeline.
@@ -68,6 +72,7 @@ func (s *signStep) generateAuthHeader(subID, keyID string, createdAt, validTill 
 type validateSignStep struct {
 	validator definition.SignValidator
 	km        definition.KeyManager
+	metrics   *telemetry.Metrics
 }
 
 // newValidateSignStep initializes and returns a new validate sign step.
@@ -78,11 +83,22 @@ func newValidateSignStep(signValidator definition.SignValidator, km definition.K
 	if km == nil {
 		return nil, fmt.Errorf("invalid config: KeyManager plugin not configured")
 	}
-	return &validateSignStep{validator: signValidator, km: km}, nil
+	metrics, _ := telemetry.GetMetrics(context.Background())
+	return &validateSignStep{
+		validator: signValidator,
+		km:        km,
+		metrics:   metrics,
+	}, nil
 }
 
 // Run executes the validation step.
 func (s *validateSignStep) Run(ctx *model.StepContext) error {
+	err := s.validateHeaders(ctx)
+	s.recordMetrics(ctx, err)
+	return err
+}
+
+func (s *validateSignStep) validateHeaders(ctx *model.StepContext) error {
 	unauthHeader := fmt.Sprintf("Signature realm=\"%s\",headers=\"(created) (expires) digest\"", ctx.SubID)
 	headerValue := ctx.Request.Header.Get(model.AuthHeaderGateway)
 	if len(headerValue) != 0 {
@@ -121,6 +137,18 @@ func (s *validateSignStep) validate(ctx *model.StepContext, value string) error 
 		return fmt.Errorf("sign validation failed: %w", err)
 	}
 	return nil
+}
+
+func (s *validateSignStep) recordMetrics(ctx *model.StepContext, err error) {
+	if s.metrics == nil {
+		return
+	}
+	status := "success"
+	if err != nil {
+		status = "failed"
+	}
+	s.metrics.SignatureValidationsTotal.Add(ctx.Context, 1,
+		metric.WithAttributes(telemetry.AttrStatus.String(status)))
 }
 
 // ParsedKeyID holds the components from the parsed Authorization header's keyId.
@@ -165,6 +193,7 @@ func parseHeader(header string) (*authHeader, error) {
 // validateSchemaStep represents the schema validation step.
 type validateSchemaStep struct {
 	validator definition.SchemaValidator
+	metrics   *telemetry.Metrics
 }
 
 // newValidateSchemaStep creates and returns the validateSchema step after validation.
@@ -173,20 +202,43 @@ func newValidateSchemaStep(schemaValidator definition.SchemaValidator) (definiti
 		return nil, fmt.Errorf("invalid config: SchemaValidator plugin not configured")
 	}
 	log.Debug(context.Background(), "adding schema validator")
-	return &validateSchemaStep{validator: schemaValidator}, nil
+	metrics, _ := telemetry.GetMetrics(context.Background())
+	return &validateSchemaStep{
+		validator: schemaValidator,
+		metrics:   metrics,
+	}, nil
 }
 
 // Run executes the schema validation step.
 func (s *validateSchemaStep) Run(ctx *model.StepContext) error {
-	if err := s.validator.Validate(ctx, ctx.Request.URL, ctx.Body); err != nil {
-		return fmt.Errorf("schema validation failed: %w", err)
+	err := s.validator.Validate(ctx, ctx.Request.URL, ctx.Body)
+	if err != nil {
+		err = fmt.Errorf("schema validation failed: %w", err)
 	}
-	return nil
+	s.recordMetrics(ctx, err)
+	return err
+}
+
+func (s *validateSchemaStep) recordMetrics(ctx *model.StepContext, err error) {
+	if s.metrics == nil {
+		return
+	}
+	status := "success"
+	if err != nil {
+		status = "failed"
+	}
+	version := extractSchemaVersion(ctx.Body)
+	s.metrics.SchemaValidationsTotal.Add(ctx.Context, 1,
+		metric.WithAttributes(
+			telemetry.AttrSchemaVersion.String(version),
+			telemetry.AttrStatus.String(status),
+		))
 }
 
 // addRouteStep represents the route determination step.
 type addRouteStep struct {
-	router definition.Router
+	router  definition.Router
+	metrics *telemetry.Metrics
 }
 
 // newAddRouteStep creates and returns the addRoute step after validation.
@@ -194,7 +246,11 @@ func newAddRouteStep(router definition.Router) (definition.Step, error) {
 	if router == nil {
 		return nil, fmt.Errorf("invalid config: Router plugin not configured")
 	}
-	return &addRouteStep{router: router}, nil
+	metrics, _ := telemetry.GetMetrics(context.Background())
+	return &addRouteStep{
+		router:  router,
+		metrics: metrics,
+	}, nil
 }
 
 // Run executes the routing step.
@@ -208,5 +264,31 @@ func (s *addRouteStep) Run(ctx *model.StepContext) error {
 		PublisherID: route.PublisherID,
 		URL:         route.URL,
 	}
+	if s.metrics != nil && ctx.Route != nil {
+		s.metrics.RoutingDecisionsTotal.Add(ctx.Context, 1,
+			metric.WithAttributes(
+				telemetry.AttrRouteType.String(ctx.Route.TargetType),
+				telemetry.AttrTargetType.String(ctx.Route.TargetType),
+			))
+	}
 	return nil
+}
+
+func extractSchemaVersion(body []byte) string {
+	type contextEnvelope struct {
+		Context struct {
+			Version     string `json:"version"`
+			CoreVersion string `json:"core_version"`
+		} `json:"context"`
+	}
+	var payload contextEnvelope
+	if err := json.Unmarshal(body, &payload); err == nil {
+		if payload.Context.CoreVersion != "" {
+			return payload.Context.CoreVersion
+		}
+		if payload.Context.Version != "" {
+			return payload.Context.Version
+		}
+	}
+	return "unknown"
 }

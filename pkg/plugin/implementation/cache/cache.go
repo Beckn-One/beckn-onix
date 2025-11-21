@@ -7,7 +7,11 @@ import (
 	"os"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+
 	"github.com/beckn-one/beckn-onix/pkg/log"
+	"github.com/beckn-one/beckn-onix/pkg/telemetry"
 	"github.com/redis/go-redis/extra/redisotel/v9"
 	"github.com/redis/go-redis/v9"
 )
@@ -32,7 +36,8 @@ type Config struct {
 
 // Cache wraps a Redis client to provide basic caching operations.
 type Cache struct {
-	Client RedisClient
+	Client  RedisClient
+	metrics *telemetry.Metrics
 }
 
 // Error variables to describe common failure modes.
@@ -92,26 +97,66 @@ func New(ctx context.Context, cfg *Config) (*Cache, func() error, error) {
 		}
 	}
 
+	metrics, _ := telemetry.GetMetrics(ctx)
+
 	log.Infof(ctx, "Cache connection to Redis established successfully")
-	return &Cache{Client: client}, client.Close, nil
+	return &Cache{Client: client, metrics: metrics}, client.Close, nil
 }
 
 // Get retrieves the value for the specified key from Redis.
 func (c *Cache) Get(ctx context.Context, key string) (string, error) {
-	return c.Client.Get(ctx, key).Result()
+	result, err := c.Client.Get(ctx, key).Result()
+	if c.metrics != nil {
+		attrs := []attribute.KeyValue{
+			telemetry.AttrOperation.String("get"),
+		}
+		switch {
+		case err == redis.Nil:
+			c.metrics.CacheMissesTotal.Add(ctx, 1, metric.WithAttributes(attrs...))
+			c.metrics.CacheOperationsTotal.Add(ctx, 1,
+				metric.WithAttributes(append(attrs, telemetry.AttrStatus.String("miss"))...))
+		case err != nil:
+			c.metrics.CacheOperationsTotal.Add(ctx, 1,
+				metric.WithAttributes(append(attrs, telemetry.AttrStatus.String("error"))...))
+		default:
+			c.metrics.CacheHitsTotal.Add(ctx, 1, metric.WithAttributes(attrs...))
+			c.metrics.CacheOperationsTotal.Add(ctx, 1,
+				metric.WithAttributes(append(attrs, telemetry.AttrStatus.String("hit"))...))
+		}
+	}
+	return result, err
 }
 
 // Set stores the given key-value pair in Redis with the specified TTL (time to live).
 func (c *Cache) Set(ctx context.Context, key, value string, ttl time.Duration) error {
-	return c.Client.Set(ctx, key, value, ttl).Err()
+	err := c.Client.Set(ctx, key, value, ttl).Err()
+	c.recordOperation(ctx, "set", err)
+	return err
 }
 
 // Delete removes the specified key from Redis.
 func (c *Cache) Delete(ctx context.Context, key string) error {
-	return c.Client.Del(ctx, key).Err()
+	err := c.Client.Del(ctx, key).Err()
+	c.recordOperation(ctx, "delete", err)
+	return err
 }
 
 // Clear removes all keys in the currently selected Redis database.
 func (c *Cache) Clear(ctx context.Context) error {
 	return c.Client.FlushDB(ctx).Err()
+}
+
+func (c *Cache) recordOperation(ctx context.Context, op string, err error) {
+	if c.metrics == nil {
+		return
+	}
+	status := "success"
+	if err != nil {
+		status = "error"
+	}
+	c.metrics.CacheOperationsTotal.Add(ctx, 1,
+		metric.WithAttributes(
+			telemetry.AttrOperation.String(op),
+			telemetry.AttrStatus.String(status),
+		))
 }

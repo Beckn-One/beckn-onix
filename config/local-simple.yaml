@@ -8,6 +8,11 @@ log:
     - message_id
     - subscriber_id
     - module_id
+telemetry:
+  serviceName: "beckn-onix"
+  serviceVersion: "1.0.0"
+  enableMetrics: true
+  environment: "development"
 http:
   port: 8081
   timeout:
@@ -63,6 +68,9 @@ modules:
             config:
               uuidKeys: transaction_id,message_id
               role: bap
+          - id: otelmetrics
+            config:
+              enabled: "true"
       steps:
         - validateSign
         - addRoute
@@ -154,6 +162,10 @@ modules:
           id: router
           config:
             routingConfig: ./config/local-simple-routing-BPPReceiver.yaml
+        middleware:
+          - id: otelmetrics
+            config:
+              enabled: "true"
       steps:
         - validateSign
         - addRoute
@@ -195,6 +207,10 @@ modules:
             routingConfig: ./config/local-simple-routing.yaml
         signer:
           id: signer
+        middleware:
+          - id: otelmetrics
+            config:
+              enabled: "true"
       steps:
         - addRoute
         - sign
