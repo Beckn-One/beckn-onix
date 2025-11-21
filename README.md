@@ -140,7 +140,8 @@ Resources:
 - **Router**: YAML-based routing rules engine for request forwarding
 - **Signer**: Ed25519 digital signature creation for outgoing requests
 - **SignValidator**: Ed25519 signature validation for incoming requests
-- **SchemaValidator**: JSON schema validation 
+- **SchemaValidator**: JSON schema validation
+- **Schemav2Validator**: OpenAPI 3.x schema validation with action-based matching 
 - **KeyManager**: HashiCorp Vault integration for production key management
 - **SimpleKeyManager**: Embedded key management for local development (no external dependencies)
 - **Publisher**: RabbitMQ message publishing for asynchronous processing
@@ -324,9 +325,11 @@ modules:
           config:
             routingConfig: ./config/routing.yaml
         schemaValidator:
-          id: schemavalidator
+          id: schemavalidator  # or schemav2validator 
           config:
-            schemaDir: ./schemas
+            schemaDir: ./schemas  # for schemavalidator
+            # type: url           # for schemav2validator
+            # location: https://example.com/spec.yaml
       steps:
         - validateSign
         - addRoute

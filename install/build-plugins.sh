@@ -19,6 +19,7 @@ plugins=(
     "otelmetrics"
     "router"
     "schemavalidator"
+    "schemav2validator"
     "signer"
     "signvalidator"
 )
