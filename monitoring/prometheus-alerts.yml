@@ -1,0 +1,158 @@
+groups:
+  - name: beckn_onix_alerts
+    interval: 30s
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          (
+            rate(http_server_requests_total{status="error"}[5m])
+            /
+            rate(http_server_requests_total[5m])
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          component: beckn-onix
+        annotations:
+          summary: High error rate detected
+          description: Error rate is {{ $value | humanizePercentage }}
+
+      - alert: CriticalErrorRate
+        expr: |
+          (
+            rate(http_server_requests_total{status="error"}[5m])
+            /
+            rate(http_server_requests_total[5m])
+          ) > 0.20
+        for: 2m
+        labels:
+          severity: critical
+          component: beckn-onix
+        annotations:
+          summary: CRITICAL error rate detected
+          description: Error rate is {{ $value | humanizePercentage }}
+
+      - alert: HighLatencyP95
+        expr: |
+          histogram_quantile(0.95,
+            rate(http_server_request_duration_seconds_bucket[5m])
+          ) > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: beckn-onix
+        annotations:
+          summary: High latency detected
+          description: P95 latency above 1s
+
+      - alert: CriticalLatencyP95
+        expr: |
+          histogram_quantile(0.95,
+            rate(http_server_request_duration_seconds_bucket[5m])
+          ) > 3
+        for: 2m
+        labels:
+          severity: critical
+          component: beckn-onix
+        annotations:
+          summary: Critical latency detected
+          description: P95 latency above 3s
+
+      - alert: StepExecutionErrors
+        expr: rate(onix_step_errors_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: warning
+          component: beckn-onix
+        annotations:
+          summary: Processing step errors detected
+          description: Step {{ $labels.step }} is failing
+
+      - alert: PluginExecutionErrors
+        expr: rate(onix_plugin_errors_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: critical
+          component: beckn-onix
+        annotations:
+          summary: Plugin errors detected
+          description: Plugin {{ $labels.plugin_id }} is failing
+
+      - alert: LowCacheHitRate
+        expr: |
+          (
+            rate(onix_cache_hits_total[10m])
+            /
+            (rate(onix_cache_hits_total[10m]) + rate(onix_cache_misses_total[10m]))
+          ) < 0.5
+        for: 10m
+        labels:
+          severity: warning
+          component: beckn-onix
+        annotations:
+          summary: Cache hit rate too low
+          description: Hit rate {{ $value | humanizePercentage }}
+
+      - alert: SignatureValidationFailures
+        expr: |
+          (
+            rate(beckn_signature_validations_total{status="failed"}[5m])
+            /
+            rate(beckn_signature_validations_total[5m])
+          ) > 0.10
+        for: 5m
+        labels:
+          severity: warning
+          component: beckn-onix
+        annotations:
+          summary: Signature validation failures
+          description: Failure rate {{ $value | humanizePercentage }}
+
+      - alert: SchemaValidationFailures
+        expr: |
+          (
+            rate(beckn_schema_validations_total{status="failed"}[5m])
+            /
+            rate(beckn_schema_validations_total[5m])
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          component: beckn-onix
+        annotations:
+          summary: Schema validation failures detected
+          description: Failure rate {{ $value | humanizePercentage }}
+
+      - alert: BecknOnixDown
+        expr: up{job="beckn-onix"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: beckn-onix
+        annotations:
+          summary: Beckn-ONIX instance down
+          description: Instance {{ $labels.instance }} is not responding
+
+      - alert: HighInFlightRequests
+        expr: http_server_requests_in_flight > 100
+        for: 5m
+        labels:
+          severity: warning
+          component: beckn-onix
+        annotations:
+          summary: High number of in-flight requests
+          description: {{ $value }} requests currently in-flight
+
+      - alert: SlowStepExecution
+        expr: |
+          histogram_quantile(0.95,
+            rate(onix_step_execution_duration_seconds_bucket[5m])
+          ) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          component: beckn-onix
+        annotations:
+          summary: Slow step execution detected
+          description: Step {{ $labels.step }} p95 duration {{ $value }}s
+

@@ -1,0 +1,154 @@
+{
+  "dashboard": {
+    "title": "Beckn-ONIX Overview",
+    "uid": "beckn-onix-overview",
+    "tags": ["beckn", "onix"],
+    "timezone": "browser",
+    "refresh": "10s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Request Rate (req/s)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_server_requests_total[5m])",
+            "legendFormat": "{{module}} - {{action}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Error Rate (%)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "100 * rate(http_server_requests_total{status=\"error\"}[5m]) / rate(http_server_requests_total[5m])",
+            "legendFormat": "{{module}} - {{action}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Request Duration (p50/p95/p99)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(http_server_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "p50 - {{module}}",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(http_server_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "p95 - {{module}}",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(http_server_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "p99 - {{module}}",
+            "refId": "C"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+      },
+      {
+        "id": 4,
+        "title": "Requests In-Flight",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "http_server_requests_in_flight",
+            "legendFormat": "{{module}} - {{role}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+      },
+      {
+        "id": 5,
+        "title": "Step Execution Duration (p95)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(onix_step_execution_duration_seconds_bucket[5m]))",
+            "legendFormat": "{{step}} - {{module}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+      },
+      {
+        "id": 6,
+        "title": "Cache Hit Rate (%)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "100 * rate(onix_cache_hits_total[5m]) / (rate(onix_cache_hits_total[5m]) + rate(onix_cache_misses_total[5m]))",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 16}
+      },
+      {
+        "id": 7,
+        "title": "Beckn Messages / sec",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(beckn_messages_total[5m])",
+            "legendFormat": "{{action}} - {{role}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24}
+      },
+      {
+        "id": 8,
+        "title": "Signature Validation Success (%)",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "100 * rate(beckn_signature_validations_total{status=\"success\"}[5m]) / rate(beckn_signature_validations_total[5m])",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 20}
+      },
+      {
+        "id": 9,
+        "title": "Schema Validation Success (%)",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "100 * rate(beckn_schema_validations_total{status=\"success\"}[5m]) / rate(beckn_schema_validations_total[5m])",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 20}
+      },
+      {
+        "id": 10,
+        "title": "Top 5 Slowest Steps",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "topk(5, rate(onix_step_execution_duration_seconds_sum[5m]) / rate(onix_step_execution_duration_seconds_count[5m]))",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24}
+      }
+    ]
+  }
+}
+
