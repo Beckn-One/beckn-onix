@@ -622,8 +622,42 @@ routingRules:
 
 #### `domain`
 **Type**: `string`  
-**Required**: Yes  
+**Required**: Conditional (Required for v1.x.x, Optional for v2.x.x)  
 **Description**: Beckn domain identifier (e.g., `retail:1.1.0`, `ONDC:TRV10`, `nic2004:60221`)
+
+**Version-Specific Behavior**:
+- **Beckn Protocol v1.x.x**: Domain is **required**. Each rule must specify a domain, and routing uses domain as a key.
+- **Beckn Protocol v2.x.x**: Domain is **optional** and ignored during routing. If provided, a warning is logged. All v2 rules are domain-agnostic.
+- **Conflict Detection**: For v2, multiple rules with the same version and endpoint (regardless of domain) will cause a configuration error.
+
+**Examples**:
+```yaml
+# Valid v1 rule - domain required
+- domain: "ONDC:TRV10"
+  version: "1.1.0"
+  targetType: "url"
+  target:
+    url: "http://backend:3000"
+  endpoints:
+    - search
+
+# Valid v2 rule - domain optional (omitted)
+- version: "2.0.0"
+  targetType: "url"
+  target:
+    url: "http://backend:3000"
+  endpoints:
+    - search
+
+# Valid v2 rule - domain provided (warning logged, but ignored)
+- domain: "ONDC:TRV10"
+  version: "2.0.0"
+  targetType: "url"
+  target:
+    url: "http://backend:3000"
+  endpoints:
+    - search
+```
 
 #### `version`
 **Type**: `string`  
@@ -791,6 +825,71 @@ routingRules:
 ```
 
 **Behavior**: All endpoints route to exactly `http://backend:3000/webhook` without appending the endpoint name.
+
+#### Example 5: Beckn Protocol v2 Domain-Agnostic Routing
+
+```yaml
+routingRules:
+  # v2 rule without domain (recommended)
+  - version: "2.0.0"
+    targetType: "url"
+    target:
+      url: "https://gateway.example.com/v2"
+    endpoints:
+      - search
+      - select
+      - init
+      - confirm
+
+  # v1 rules still require domain
+  - domain: "ONDC:TRV10"
+    version: "1.1.0"
+    targetType: "url"
+    target:
+      url: "https://gateway.example.com/v1/trv"
+    endpoints:
+      - search
+```
+
+**Behavior**: 
+- v2 requests (version `2.0.0`) route to gateway regardless of domain in request
+- v1 requests (version `1.1.0`) route based on domain matching
+- Domain field is ignored for v2 routing decisions
+
+#### Example 6: v2 Conflict Detection
+
+```yaml
+# INVALID CONFIGURATION - Will fail at startup
+routingRules:
+  - domain: "ONDC:TRV10"
+    version: "2.0.0"
+    targetType: "url"
+    target:
+      url: "https://backend-a.com"
+    endpoints:
+      - search
+  
+  - domain: "ONDC:TRV11"  # Different domain, but same version and endpoint
+    version: "2.0.0"
+    targetType: "url"
+    target:
+      url: "https://backend-b.com"
+    endpoints:
+      - search  # ERROR: Duplicate v2 rule for 'search' endpoint
+```
+
+**Error**: Configuration will fail with: `duplicate endpoint 'search' found for version 2.0.0. For v2.x.x, domain is ignored, so you can only define each endpoint once per version. Please remove the duplicate rule`
+
+**Fix**: For v2, use a single rule per endpoint since domain is ignored:
+```yaml
+routingRules:
+  - version: "2.0.0"
+    targetType: "url"
+    target:
+      url: "https://unified-backend.com"
+    endpoints:
+      - search
+```
 
 ---
 

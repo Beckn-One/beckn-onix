@@ -865,28 +865,38 @@ router:
 
 ### Routing Rules Configuration
 
+**For complete routing configuration documentation including v2 domain-agnostic routing, see [CONFIG.md - Routing Configuration](CONFIG.md#routing-configuration).**
+
+Basic example:
+
 ```yaml
 routingRules:
+  # v1.x.x - domain is required
   - domain: "ONDC:RET10"
     version: "1.0.0"
     targetType: "url"  # or "publisher"
     target:
       url: "https://seller.example.com/beckn"
-      # OR for async
-      # queueName: "retail_queue"
-      # routingKey: "retail.*"
     endpoints:
       - search
       - select
       - init
       - confirm
-    headers:  # Optional additional headers
-      X-Custom-Header: "value"
-    timeout: 60  # seconds
-    retryPolicy:
-      maxRetries: 3
-      backoff: exponential
+
+  # v2.x.x - domain is optional (domain-agnostic routing)
+  - version: "2.0.0"
+    targetType: "url"
+    target:
+      url: "https://seller.example.com/v2/beckn"
+    endpoints:
+      - search
+      - select
 ```
+
+**Key Points**:
+- **v1.x.x**: Domain field is required and used for routing
+- **v2.x.x**: Domain field is optional and ignored (domain-agnostic)
+- See CONFIG.md for target types: `url`, `bpp`, `bap`, `publisher`
 
 ### Processing Steps
 
