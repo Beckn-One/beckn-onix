@@ -37,7 +37,7 @@ type Config struct {
 // Cache wraps a Redis client to provide basic caching operations.
 type Cache struct {
 	Client  RedisClient
-	metrics *telemetry.Metrics
+	metrics *CacheMetrics
 }
 
 // Error variables to describe common failure modes.
@@ -97,7 +97,7 @@ func New(ctx context.Context, cfg *Config) (*Cache, func() error, error) {
 		}
 	}
 
-	metrics, _ := telemetry.GetMetrics(ctx)
+	metrics, _ := GetCacheMetrics(ctx)
 
 	log.Infof(ctx, "Cache connection to Redis established successfully")
 	return &Cache{Client: client, metrics: metrics}, client.Close, nil

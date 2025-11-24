@@ -19,12 +19,12 @@ type InstrumentedStep struct {
 	step       definition.Step
 	stepName   string
 	moduleName string
-	metrics    *Metrics
+	metrics    *StepMetrics
 }
 
 // NewInstrumentedStep returns a telemetry enabled wrapper around a definition.Step.
 func NewInstrumentedStep(step definition.Step, stepName, moduleName string) (*InstrumentedStep, error) {
-	metrics, err := GetMetrics(context.Background())
+	metrics, err := GetStepMetrics(context.Background())
 	if err != nil {
 		return nil, err
 	}

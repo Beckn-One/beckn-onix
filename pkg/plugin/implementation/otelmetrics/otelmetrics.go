@@ -15,7 +15,7 @@ import (
 
 // Middleware instruments inbound HTTP handlers with OpenTelemetry metrics.
 type Middleware struct {
-	metrics *telemetry.Metrics
+	metrics *HTTPMetrics
 	enabled bool
 }
 
@@ -23,7 +23,7 @@ type Middleware struct {
 func New(ctx context.Context, cfg map[string]string) (*Middleware, error) {
 	enabled := cfg["enabled"] != "false"
 
-	metrics, err := telemetry.GetMetrics(ctx)
+	metrics, err := GetHTTPMetrics(ctx)
 	if err != nil {
 		log.Warnf(ctx, "OpenTelemetry metrics unavailable: %v", err)
 	}

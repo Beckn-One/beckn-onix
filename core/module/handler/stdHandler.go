@@ -301,7 +301,7 @@ func (h *stdHandler) initSteps(ctx context.Context, mgr PluginManager, cfg *Conf
 		instrumentedStep, wrapErr := telemetry.NewInstrumentedStep(s, step, h.moduleName)
 		if wrapErr != nil {
 			log.Warnf(ctx, "Failed to instrument step %s: %v", step, wrapErr)
-			h.steps = append(h.steps, s)
+		h.steps = append(h.steps, s)
 			continue
 		}
 		h.steps = append(h.steps, instrumentedStep)

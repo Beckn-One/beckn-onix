@@ -69,6 +69,11 @@ The **Beckn Protocol** is an open protocol that enables location-aware, local co
   - Per-step histograms with error attribution
   - Cache, routing, plugin, and business KPIs (signature/schema validations, Beckn messages)
   - Native Prometheus exporter with Grafana dashboards & alert rules (`monitoring/`)
+  - **Modular Metrics Architecture**: Metrics are organized by module for better maintainability:
+    - HTTP metrics in `otelmetrics` plugin
+    - Step execution metrics in `telemetry` package
+    - Handler metrics (signature, schema, routing) in `handler` module
+    - Cache metrics in `cache` plugin
 - **Runtime Instrumentation**: Go runtime + Redis client metrics baked in
 - **Health Checks**: Liveness and readiness probes for Kubernetes
 

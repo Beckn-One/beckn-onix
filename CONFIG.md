@@ -242,16 +242,38 @@ http://your-server:port/metrics
 
 ### Metrics Collected
 
+Metrics are organized by module for better maintainability and encapsulation:
+
+#### HTTP Metrics (from `otelmetrics` plugin)
 - `http_server_requests_total`, `http_server_request_duration_seconds`, `http_server_requests_in_flight`
 - `http_server_request_size_bytes`, `http_server_response_size_bytes`
+- `beckn_messages_total` - Total Beckn protocol messages processed
+
+#### Step Execution Metrics (from `telemetry` package)
 - `onix_step_executions_total`, `onix_step_execution_duration_seconds`, `onix_step_errors_total`
-- `onix_plugin_execution_duration_seconds`, `onix_plugin_errors_total`
-- `beckn_messages_total`, `beckn_signature_validations_total`, `beckn_schema_validations_total`
-- `onix_routing_decisions_total`
+
+#### Handler Metrics (from `handler` module)
+- `beckn_signature_validations_total` - Signature validation attempts
+- `beckn_schema_validations_total` - Schema validation attempts
+- `onix_routing_decisions_total` - Routing decisions taken by handler
+
+#### Cache Metrics (from `cache` plugin)
 - `onix_cache_operations_total`, `onix_cache_hits_total`, `onix_cache_misses_total`
+
+#### Plugin Metrics (from `telemetry` package)
+- `onix_plugin_execution_duration_seconds`, `onix_plugin_errors_total`
+
+#### Runtime Metrics
 - Go runtime metrics (`go_*`) and Redis instrumentation via `redisotel`
 
 Each metric includes consistent labels such as `module`, `role`, `action`, `status`, `step`, `plugin_id`, and `schema_version` to enable low-cardinality dashboards.
+
+**Note**: Metric definitions are now located in their respective modules:
+- HTTP metrics: `pkg/plugin/implementation/otelmetrics/metrics.go`
+- Step metrics: `pkg/telemetry/step_metrics.go`
+- Handler metrics: `core/module/handler/metrics.go`
+- Cache metrics: `pkg/plugin/implementation/cache/metrics.go`
+- Plugin metrics: `pkg/telemetry/metrics.go`
 
 ---
 

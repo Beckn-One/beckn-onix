@@ -72,7 +72,7 @@ func (s *signStep) generateAuthHeader(subID, keyID string, createdAt, validTill 
 type validateSignStep struct {
 	validator definition.SignValidator
 	km        definition.KeyManager
-	metrics   *telemetry.Metrics
+	metrics   *HandlerMetrics
 }
 
 // newValidateSignStep initializes and returns a new validate sign step.
@@ -83,7 +83,7 @@ func newValidateSignStep(signValidator definition.SignValidator, km definition.K
 	if km == nil {
 		return nil, fmt.Errorf("invalid config: KeyManager plugin not configured")
 	}
-	metrics, _ := telemetry.GetMetrics(context.Background())
+	metrics, _ := GetHandlerMetrics(context.Background())
 	return &validateSignStep{
 		validator: signValidator,
 		km:        km,
@@ -193,7 +193,7 @@ func parseHeader(header string) (*authHeader, error) {
 // validateSchemaStep represents the schema validation step.
 type validateSchemaStep struct {
 	validator definition.SchemaValidator
-	metrics   *telemetry.Metrics
+	metrics   *HandlerMetrics
 }
 
 // newValidateSchemaStep creates and returns the validateSchema step after validation.
@@ -202,7 +202,7 @@ func newValidateSchemaStep(schemaValidator definition.SchemaValidator) (definiti
 		return nil, fmt.Errorf("invalid config: SchemaValidator plugin not configured")
 	}
 	log.Debug(context.Background(), "adding schema validator")
-	metrics, _ := telemetry.GetMetrics(context.Background())
+	metrics, _ := GetHandlerMetrics(context.Background())
 	return &validateSchemaStep{
 		validator: schemaValidator,
 		metrics:   metrics,
@@ -238,7 +238,7 @@ func (s *validateSchemaStep) recordMetrics(ctx *model.StepContext, err error) {
 // addRouteStep represents the route determination step.
 type addRouteStep struct {
 	router  definition.Router
-	metrics *telemetry.Metrics
+	metrics *HandlerMetrics
 }
 
 // newAddRouteStep creates and returns the addRoute step after validation.
@@ -246,7 +246,7 @@ func newAddRouteStep(router definition.Router) (definition.Step, error) {
 	if router == nil {
 		return nil, fmt.Errorf("invalid config: Router plugin not configured")
 	}
-	metrics, _ := telemetry.GetMetrics(context.Background())
+	metrics, _ := GetHandlerMetrics(context.Background())
 	return &addRouteStep{
 		router:  router,
 		metrics: metrics,
