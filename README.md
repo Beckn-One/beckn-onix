@@ -118,7 +118,7 @@ The **Beckn Protocol** is an open protocol that enables location-aware, local co
 
 #### 3. **Plugin Types**
 - **Cache**: Redis-based response caching 
-- **Router**: YAML-based routing rules engine for request forwarding
+- **Router**: YAML-based routing rules engine for request forwarding (supports domain-agnostic routing for Beckn v2.x.x)
 - **Signer**: Ed25519 digital signature creation for outgoing requests
 - **SignValidator**: Ed25519 signature validation for incoming requests
 - **SchemaValidator**: JSON schema validation

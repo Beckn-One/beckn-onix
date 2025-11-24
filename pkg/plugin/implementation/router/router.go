@@ -92,14 +92,23 @@ func (r *Router) loadRules(configPath string) error {
 	}
 	// Build the optimized rule map
 	for _, rule := range config.RoutingRules {
+		// For v2.x.x, warn if domain is provided and normalize to wildcard "*"
+		domain := rule.Domain
+		if isV2Version(rule.Version) {
+			if domain != "" {
+				fmt.Printf("WARNING: Domain field '%s' is not needed for version %s and will be ignored. Consider removing it from your config.\n", domain, rule.Version)
+			}
+			domain = "*"
+		}
+
 		// Initialize domain map if not exists
-		if _, ok := r.rules[rule.Domain]; !ok {
-			r.rules[rule.Domain] = make(map[string]map[string]*model.Route)
+		if _, ok := r.rules[domain]; !ok {
+			r.rules[domain] = make(map[string]map[string]*model.Route)
 		}
 
 		// Initialize version map if not exists
-		if _, ok := r.rules[rule.Domain][rule.Version]; !ok {
-			r.rules[rule.Domain][rule.Version] = make(map[string]*model.Route)
+		if _, ok := r.rules[domain][rule.Version]; !ok {
+			r.rules[domain][rule.Version] = make(map[string]*model.Route)
 		}
 
 		// Add all endpoints for this rule
@@ -137,7 +146,13 @@ func (r *Router) loadRules(configPath string) error {
 					URL:        parsedURL,
 				}
 			}
-			r.rules[rule.Domain][rule.Version][endpoint] = route
+			// Check for conflicting v2 rules
+			if isV2Version(rule.Version) {
+				if _, exists := r.rules[domain][rule.Version][endpoint]; exists {
+					return fmt.Errorf("duplicate endpoint '%s' found for version %s. For v2.x.x, domain is ignored, so you can only define each endpoint once per version. Please remove the duplicate rule", endpoint, rule.Version)
+				}
+			}
+			r.rules[domain][rule.Version][endpoint] = route
 		}
 	}
 
@@ -147,9 +162,14 @@ func (r *Router) loadRules(configPath string) error {
 // validateRules performs basic validation on the loaded routing rules.
 func validateRules(rules []routingRule) error {
 	for _, rule := range rules {
-		// Ensure domain, version, and TargetType are present
-		if rule.Domain == "" || rule.Version == "" || rule.TargetType == "" {
-			return fmt.Errorf("invalid rule: domain, version, and targetType are required")
+		// Ensure version and TargetType are present
+		if rule.Version == "" || rule.TargetType == "" {
+			return fmt.Errorf("invalid rule: version and targetType are required")
+		}
+
+		// Domain is required only for v1.x.x
+		if !isV2Version(rule.Version) && rule.Domain == "" {
+			return fmt.Errorf("invalid rule: domain is required for version %s", rule.Version)
 		}
 
 		// Validate based on TargetType
@@ -197,19 +217,34 @@ func (r *Router) Route(ctx context.Context, url *url.URL, body []byte) (*model.R
 	// Extract the endpoint from the URL
 	endpoint := path.Base(url.Path)
 
+	// For v2.x.x, ignore domain and use wildcard; for v1.x.x, use actual domain
+	domain := requestBody.Context.Domain
+	if isV2Version(requestBody.Context.Version) {
+		domain = "*"
+	}
+
 	// Lookup route in the optimized map
-	domainRules, ok := r.rules[requestBody.Context.Domain]
+	domainRules, ok := r.rules[domain]
 	if !ok {
+		if domain == "*" {
+			return nil, fmt.Errorf("no routing rules found for version %s", requestBody.Context.Version)
+		}
 		return nil, fmt.Errorf("no routing rules found for domain %s", requestBody.Context.Domain)
 	}
 
 	versionRules, ok := domainRules[requestBody.Context.Version]
 	if !ok {
+		if domain == "*" {
+			return nil, fmt.Errorf("no routing rules found for version %s", requestBody.Context.Version)
+		}
 		return nil, fmt.Errorf("no routing rules found for domain %s version %s", requestBody.Context.Domain, requestBody.Context.Version)
 	}
 
 	route, ok := versionRules[endpoint]
 	if !ok {
+		if domain == "*" {
+			return nil, fmt.Errorf("endpoint '%s' is not supported for version %s in routing config", endpoint, requestBody.Context.Version)
+		}
 		return nil, fmt.Errorf("endpoint '%s' is not supported for domain %s and version %s in routing config",
 			endpoint, requestBody.Context.Domain, requestBody.Context.Version)
 	}
@@ -251,4 +286,9 @@ func joinPath(u *url.URL, endpoint string) string {
 		u.Path = "/"
 	}
 	return path.Join(u.Path, endpoint)
+}
+
+// isV2Version checks if the version is 2.x.x
+func isV2Version(version string) bool {
+	return strings.HasPrefix(version, "2.")
 }

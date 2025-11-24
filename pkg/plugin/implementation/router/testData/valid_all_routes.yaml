@@ -1,14 +1,14 @@
 # testData/all_route_types.yaml
 routingRules:
   - domain: ONDC:TRV10
-    version: 2.0.0
+    version: 1.1.0
     targetType: url
     target:
       url: https://mock_gateway.com/v2/ondc
     endpoints:
       - search
   - domain: ONDC:TRV10
-    version: 2.0.0
+    version: 1.1.0
     targetType: bap
     target:
       url: https://mock_bpp.com/v2/ondc
@@ -16,14 +16,14 @@ routingRules:
       - init
       - select
   - domain: ONDC:TRV10
-    version: 2.0.0
+    version: 1.1.0
     targetType: publisher
     target:
       publisherId: beckn_onix_topic
     endpoints:
       - confirm
   - domain: ONDC:TRV10
-    version: 2.0.0
+    version: 1.1.0
     targetType: bap
     target:
       url: https://mock_bap_gateway.com/v2/ondc
