@@ -1,0 +1,14 @@
+routingRules:
+  - domain: "beckn.one:deg:ev-charging:2.0.0"  # Retail domain
+    version: "2.0.0"
+    targetType: "bap"
+    endpoints:
+      - on_status
+      - on_cancel
+      - on_update
+      - on_select
+      - on_init
+      - on_confirm
+      - on_track
+      - on_rating
+      - on_support
