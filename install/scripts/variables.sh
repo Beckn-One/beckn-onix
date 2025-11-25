@@ -75,3 +75,4 @@ registry_docker_compose_file=docker-compose-registry.yml
 gateway_docker_compose_file=docker-compose-gateway.yml
 gcl_docker_compose_file=docker-compose-gcl.yml
 adapter_docker_compose_file=docker-compose-adapter.yml
+adapter_beckn_one_docker_compose_file=docker-compose-adapter-beckn-one.yml

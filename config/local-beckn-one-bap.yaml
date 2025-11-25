@@ -1,0 +1,113 @@
+appName: "onix-local"
+log:
+  level: debug
+  destinations:
+    - type: stdout
+  contextKeys:
+    - transaction_id
+    - message_id
+    - subscriber_id
+    - module_id
+http:
+  port: 8081
+  timeout:
+    read: 30
+    write: 30
+    idle: 30
+pluginManager:
+  root: ./plugins
+modules:
+  - name: bapTxnReceiver
+    path: /bap/receiver/
+    handler:
+      type: std
+      role: bap
+      httpClientConfig:
+        maxIdleConns: 1000
+        maxIdleConnsPerHost: 200
+        idleConnTimeout: 300s
+        responseHeaderTimeout: 5s
+      plugins:
+        registry:
+          id: dediregistry
+          config:
+            url: http://34.14.173.68:8080/dedi
+            registryName: subscribers.beckn.one
+            timeout: 10
+        keyManager:
+          id: simplekeymanager
+          config:
+            networkParticipant: ev-charging.sandbox1.com
+            keyId: 76EU7PktCXdPoNEZBjmg4Eb25A2egsd5MYJ67Qxza7bJQFvBHCYxgk
+            signingPrivateKey: 9NBh67Pk/6v3irrkYZHlQ5E1qw+GivHdDFtKeCylzIM=
+            signingPublicKey: Z3Hnc8FZDo/7dwWApeRVs6OV560gr7uxPsFUDGUMsBg=
+            encrPrivateKey: 9NBh67Pk/6v3irrkYZHlQ5E1qw+GivHdDFtKeCylzIM=
+            encrPublicKey: Z3Hnc8FZDo/7dwWApeRVs6OV560gr7uxPsFUDGUMsBg=
+        cache:
+          id: cache
+          config:
+            addr: redis:6379
+        schemaValidator:
+          id: schemavalidator
+          config:
+            schemaDir: ./schemas
+        signValidator:
+          id: signvalidator
+        router:
+          id: router
+          config:
+            routingConfig: ./config/local-beckn-one-routing-BAPReceiver.yaml
+        middleware:
+          - id: reqpreprocessor
+            config:
+              uuidKeys: transaction_id,message_id
+              role: bap
+      steps:
+        - validateSign
+        - addRoute
+  
+  - name: bapTxnCaller
+    path: /bap/caller/
+    handler:
+      type: std
+      role: bap
+      httpClientConfig:
+        maxIdleConns: 1000
+        maxIdleConnsPerHost: 200
+        idleConnTimeout: 300s
+        responseHeaderTimeout: 5s
+      plugins:
+        registry:
+          id: dediregistry
+          config:
+            url: http://34.14.173.68:8080/dedi
+            registryName: subscribers.beckn.one
+            timeout: 10
+        keyManager:
+          id: simplekeymanager
+          config:
+            networkParticipant: ev-charging.sandbox1.com
+            keyId: 76EU7PktCXdPoNEZBjmg4Eb25A2egsd5MYJ67Qxza7bJQFvBHCYxgk
+            signingPrivateKey: 9NBh67Pk/6v3irrkYZHlQ5E1qw+GivHdDFtKeCylzIM=
+            signingPublicKey: Z3Hnc8FZDo/7dwWApeRVs6OV560gr7uxPsFUDGUMsBg=
+            encrPrivateKey: 9NBh67Pk/6v3irrkYZHlQ5E1qw+GivHdDFtKeCylzIM=
+            encrPublicKey: Z3Hnc8FZDo/7dwWApeRVs6OV560gr7uxPsFUDGUMsBg=
+        cache:
+          id: cache
+          config:
+            addr: redis:6379
+        router:
+          id: router
+          config:
+            routingConfig: ./config/local-beckn-one-routing-BAPCaller.yaml
+        signer:
+          id: signer
+        middleware:
+          - id: reqpreprocessor
+            config:
+              uuidKeys: transaction_id,message_id
+              role: bap
+      steps:
+        - addRoute
+        - sign
+  
