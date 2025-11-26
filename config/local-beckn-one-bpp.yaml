@@ -34,6 +34,9 @@ modules:
             url: http://34.14.173.68:8080/dedi
             registryName: subscribers.beckn.one
             timeout: 10
+            retry_max: 3
+            retry_wait_min: 100ms
+            retry_wait_max: 500ms
         keyManager:
           id: simplekeymanager
           config:
@@ -78,6 +81,9 @@ modules:
             url: http://34.14.173.68:8080/dedi
             registryName: subscribers.beckn.one
             timeout: 10
+            retry_max: 3
+            retry_wait_min: 100ms
+            retry_wait_max: 500ms
         keyManager:
           id: simplekeymanager
           config:
