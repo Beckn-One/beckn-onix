@@ -15,9 +15,12 @@ import (
 
 // Config holds configuration parameters for the DeDi registry client.
 type Config struct {
-	URL          string `yaml:"url" json:"url"`
-	RegistryName string `yaml:"registryName" json:"registryName"`
-	Timeout      int    `yaml:"timeout" json:"timeout"`
+	URL          string        `yaml:"url" json:"url"`
+	RegistryName string        `yaml:"registryName" json:"registryName"`
+	Timeout      int           `yaml:"timeout" json:"timeout"`
+	RetryMax     int           `yaml:"retry_max" json:"retry_max"`
+	RetryWaitMin time.Duration `yaml:"retry_wait_min" json:"retry_wait_min"`
+	RetryWaitMax time.Duration `yaml:"retry_wait_max" json:"retry_wait_max"`
 }
 
 // DeDiRegistryClient encapsulates the logic for calling the DeDi registry endpoints.
@@ -53,6 +56,17 @@ func New(ctx context.Context, cfg *Config) (*DeDiRegistryClient, func() error, e
 	// Configure timeout if provided
 	if cfg.Timeout > 0 {
 		retryClient.HTTPClient.Timeout = time.Duration(cfg.Timeout) * time.Second
+	}
+
+	// Configure retry settings if provided
+	if cfg.RetryMax > 0 {
+		retryClient.RetryMax = cfg.RetryMax
+	}
+	if cfg.RetryWaitMin > 0 {
+		retryClient.RetryWaitMin = cfg.RetryWaitMin
+	}
+	if cfg.RetryWaitMax > 0 {
+		retryClient.RetryWaitMax = cfg.RetryWaitMax
 	}
 
 	client := &DeDiRegistryClient{

@@ -392,7 +392,34 @@ registry:
 
 ---
 
-#### 2. Key Manager Plugin
+#### 2. Dediregistry Plugin
+
+**Purpose**: Lookup participant information from a Decentralized Discovery (DeDi) registry.
+
+**Configuration**:
+```yaml
+registry:
+  id: dediregistry
+  config:
+    url: "https://dedi-wrapper.example.com/dedi"
+    registryName: "subscribers.beckn.one"
+    timeout: 30
+    retry_max: 3
+    retry_wait_min: 1s
+    retry_wait_max: 5s
+```
+
+**Parameters**:
+- `url`: DeDi wrapper API base URL (Required)
+- `registryName`: Name of the registry (Required)
+- `timeout`: Request timeout in seconds (Optional, default: client default)
+- `retry_max`: Maximum number of retry attempts (Optional, default: 4)
+- `retry_wait_min`: Minimum wait time between retries in duration format (Optional, default: 1s)
+- `retry_wait_max`: Maximum wait time between retries in duration format (Optional, default: 30s)
+
+---
+
+#### 3. Key Manager Plugin
 
 **Purpose**: Manage cryptographic keys for signing and verification.
 

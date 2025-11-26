@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/beckn-one/beckn-onix/pkg/model"
 )
@@ -84,6 +85,30 @@ func TestNew(t *testing.T) {
 	if err := closer(); err != nil {
 		t.Errorf("closer() error = %v", err)
 	}
+
+	t.Run("should apply custom retry settings", func(t *testing.T) {
+		cfg := &Config{
+			URL:          "http://test.com",
+			RegistryName: "subscribers.beckn.one",
+			RetryMax:     10,
+			RetryWaitMin: 100 * time.Millisecond,
+			RetryWaitMax: 1 * time.Second,
+		}
+		client, _, err := New(ctx, cfg)
+		if err != nil {
+			t.Fatalf("expected no error, but got: %v", err)
+		}
+
+		if client.client.RetryMax != cfg.RetryMax {
+			t.Errorf("expected RetryMax to be %d, but got %d", cfg.RetryMax, client.client.RetryMax)
+		}
+		if client.client.RetryWaitMin != cfg.RetryWaitMin {
+			t.Errorf("expected RetryWaitMin to be %v, but got %v", cfg.RetryWaitMin, client.client.RetryWaitMin)
+		}
+		if client.client.RetryWaitMax != cfg.RetryWaitMax {
+			t.Errorf("expected RetryWaitMax to be %v, but got %v", cfg.RetryWaitMax, client.client.RetryWaitMax)
+		}
+	})
 }
 
 func TestLookup(t *testing.T) {
