@@ -19,6 +19,9 @@ registry:
     url: "https://dedi-wrapper.example.com/dedi"
     registryName: "subscribers.beckn.one"
     timeout: 30
+    retry_max: 3
+    retry_wait_min: 1s
+    retry_wait_max: 5s
 ```
 
 ### Configuration Parameters
@@ -28,6 +31,9 @@ registry:
 | `url` | Yes | DeDi wrapper API base URL (include /dedi path) | - |
 | `registryName` | Yes | Registry name for lookup path | - |
 | `timeout` | No | Request timeout in seconds | Client default |
+| `retry_max` | No | Maximum number of retry attempts | 4 (library default) |
+| `retry_wait_min` | No | Minimum wait time between retries (e.g., "1s", "500ms") | 1s (library default) |
+| `retry_wait_max` | No | Maximum wait time between retries (e.g., "5s") | 30s (library default) |
 
 ## API Integration
 
@@ -88,6 +94,9 @@ modules:
             url: "https://dedi-wrapper.example.com/dedi"
             registryName: "subscribers.beckn.one"
             timeout: 30
+            retry_max: 3
+            retry_wait_min: 1s
+            retry_wait_max: 5s
       steps:
         - validateSign  # Required for registry lookup
         - addRoute
