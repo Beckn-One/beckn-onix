@@ -63,14 +63,10 @@ modules:
           id: router
           config:
             routingConfig: ./config/local-simple-routing.yaml
-        middleware:
           - id: reqpreprocessor
             config:
               uuidKeys: transaction_id,message_id
               role: bap
-          - id: otelmetrics
-            config:
-              enabled: "true"
       steps:
         - validateSign
         - addRoute
@@ -112,7 +108,6 @@ modules:
             routingConfig: ./config/local-simple-routing-BAPCaller.yaml
         signer:
           id: signer
-        middleware:
           - id: reqpreprocessor
             config:
               uuidKeys: transaction_id,message_id
@@ -163,9 +158,6 @@ modules:
           config:
             routingConfig: ./config/local-simple-routing-BPPReceiver.yaml
         middleware:
-          - id: otelmetrics
-            config:
-              enabled: "true"
       steps:
         - validateSign
         - addRoute
@@ -208,9 +200,6 @@ modules:
         signer:
           id: signer
         middleware:
-          - id: otelmetrics
-            config:
-              enabled: "true"
       steps:
         - addRoute
         - sign

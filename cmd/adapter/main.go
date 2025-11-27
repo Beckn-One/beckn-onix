@@ -24,7 +24,7 @@ import (
 type Config struct {
 	AppName       string                `yaml:"appName"`
 	Log           log.Config            `yaml:"log"`
-	Telemetry     telemetry.Config      `yaml:"telemetry"`
+	Telemetry     *telemetry.Config     `yaml:"telemetry"`
 	PluginManager *plugin.ManagerConfig `yaml:"pluginManager"`
 	Modules       []module.Config       `yaml:"modules"`
 	HTTP          httpConfig            `yaml:"http"`
@@ -100,7 +100,7 @@ func newServer(ctx context.Context, mgr handler.PluginManager, cfg *Config, otel
 
 	if otelProvider != nil && otelProvider.MetricsHandler != nil {
 		mux.Handle("/metrics", otelProvider.MetricsHandler)
-			log.Infof(ctx, "Metrics endpoint registered at /metrics")
+		log.Infof(ctx, "Metrics endpoint registered at /metrics")
 	}
 
 	if err := module.Register(ctx, cfg.Modules, mux, mgr); err != nil {
@@ -125,22 +125,6 @@ func run(ctx context.Context, configPath string) error {
 		return fmt.Errorf("failed to initialize logger: %w", err)
 	}
 
-	// Initialize telemetry.
-	log.Infof(ctx, "Initializing telemetry with config: %+v", cfg.Telemetry)
-	otelProvider, err := telemetry.NewProvider(ctx, &cfg.Telemetry)
-	if err != nil {
-		return fmt.Errorf("failed to initialize telemetry: %w", err)
-	}
-	if otelProvider != nil && otelProvider.Shutdown != nil {
-		closers = append(closers, func() {
-			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			if err := otelProvider.Shutdown(shutdownCtx); err != nil {
-				log.Errorf(ctx, err, "Failed to shutdown telemetry: %v", err)
-			}
-		})
-	}
-
 	// Initialize plugin manager.
 	log.Infof(ctx, "Initializing plugin manager")
 	mgr, closer, err := newManagerFunc(ctx, cfg.PluginManager)
@@ -149,6 +133,31 @@ func run(ctx context.Context, configPath string) error {
 	}
 	closers = append(closers, closer)
 	log.Debug(ctx, "Plugin manager loaded.")
+
+	// Initialize telemetry via plugin.
+	var otelProvider *telemetry.Provider
+	if cfg.Telemetry == nil {
+		log.Info(ctx, "Telemetry config not provided; skipping OpenTelemetry setup")
+	} else {
+		log.Infof(ctx, "Initializing telemetry via plugin id=otelsetup")
+
+		// Convert telemetry.Config to plugin.Config
+		pluginConfig := &plugin.Config{
+			ID: "otelsetup",
+			Config: map[string]string{
+				"serviceName":    cfg.Telemetry.ServiceName,
+				"serviceVersion": cfg.Telemetry.ServiceVersion,
+				"enableMetrics":  fmt.Sprintf("%t", cfg.Telemetry.EnableMetrics),
+				"environment":    cfg.Telemetry.Environment,
+			},
+		}
+
+		otelProvider, err = mgr.OtelSetup(ctx, pluginConfig)
+		if err != nil {
+			return fmt.Errorf("failed to initialize telemetry plugin: %w", err)
+		}
+		// Note: The closer is now handled by the plugin manager
+	}
 
 	// Initialize HTTP server.
 	log.Infof(ctx, "Initializing HTTP server")

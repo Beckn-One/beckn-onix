@@ -196,7 +196,7 @@ log:
 **Required**: No  
 **Description**: OpenTelemetry configuration controlling whether the Prometheus exporter is enabled.
 
-**Important**: The `/metrics` endpoint is only exposed when `enableMetrics: true`.
+**Important**: This block is optional—omit it to run without telemetry. When present, the `/metrics` endpoint is exposed only if `enableMetrics: true`.
 
 #### Parameters:
 
@@ -223,7 +223,7 @@ log:
 **Default**: `"development"`  
 **Description**: Sets the `deployment.environment` attribute (e.g., `development`, `staging`, `production`).
 
-**Example - Enable Metrics**:
+**Example - Enable Metrics** (matches `config/local-simple.yaml`):
 ```yaml
 telemetry:
   enableMetrics: true
@@ -244,10 +244,9 @@ http://your-server:port/metrics
 
 Metrics are organized by module for better maintainability and encapsulation:
 
-#### HTTP Metrics (from `otelmetrics` plugin)
-- `http_server_requests_total`, `http_server_request_duration_seconds`, `http_server_requests_in_flight`
-- `http_server_request_size_bytes`, `http_server_response_size_bytes`
-- `beckn_messages_total` - Total Beckn protocol messages processed
+#### OTel Setup (from `otelsetup` plugin)
+- Prometheus exporter & `/metrics` handler registration
+- Go runtime instrumentation (`go_*`), resource attributes, and meter provider wiring
 
 #### Step Execution Metrics (from `telemetry` package)
 - `onix_step_executions_total`, `onix_step_execution_duration_seconds`, `onix_step_errors_total`
@@ -269,7 +268,7 @@ Metrics are organized by module for better maintainability and encapsulation:
 Each metric includes consistent labels such as `module`, `role`, `action`, `status`, `step`, `plugin_id`, and `schema_version` to enable low-cardinality dashboards.
 
 **Note**: Metric definitions are now located in their respective modules:
-- HTTP metrics: `pkg/plugin/implementation/otelmetrics/metrics.go`
+- OTel setup: `pkg/plugin/implementation/otelsetup`
 - Step metrics: `pkg/telemetry/step_metrics.go`
 - Handler metrics: `core/module/handler/metrics.go`
 - Cache metrics: `pkg/plugin/implementation/cache/metrics.go`

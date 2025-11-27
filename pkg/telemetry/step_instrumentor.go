@@ -11,19 +11,23 @@ import (
 
 	"github.com/beckn-one/beckn-onix/pkg/log"
 	"github.com/beckn-one/beckn-onix/pkg/model"
-	"github.com/beckn-one/beckn-onix/pkg/plugin/definition"
 )
+
+// StepRunner represents the minimal contract required for step instrumentation.
+type StepRunner interface {
+	Run(*model.StepContext) error
+}
 
 // InstrumentedStep wraps a processing step with telemetry instrumentation.
 type InstrumentedStep struct {
-	step       definition.Step
+	step       StepRunner
 	stepName   string
 	moduleName string
 	metrics    *StepMetrics
 }
 
 // NewInstrumentedStep returns a telemetry enabled wrapper around a definition.Step.
-func NewInstrumentedStep(step definition.Step, stepName, moduleName string) (*InstrumentedStep, error) {
+func NewInstrumentedStep(step StepRunner, stepName, moduleName string) (*InstrumentedStep, error) {
 	metrics, err := GetStepMetrics(context.Background())
 	if err != nil {
 		return nil, err
