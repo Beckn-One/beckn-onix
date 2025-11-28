@@ -536,10 +536,19 @@ curl http://localhost:8081/bap/receiver/
 
 ## Production Setup
 
+### Integrating with Public cloud providers
+
+Public cloud providers have built integration plugins and other tools to deploy Beckn ONIX easily. They provide specialized plugins that integrate with managed services on those platforms. Network participants can choose to consume them.
+
+1. [Google Cloud Platform](https://github.com/GoogleCloudPlatform/dpi-accelerator-beckn-onix)
+2. [Amazon Web Services](https://github.com/Beckn-One/beckn-onix/tree/main-pre-plugins/aws-cdk)
+
+The rest of the document focuses on how to deploy ONIX in Production with cloud agnostic plugins and tools.
+
 ### Additional Requirements for Production
 
 1. **HashiCorp Vault** for key management
-2. **RabbitMQ** for message queuing
+2. **RabbitMQ** for message queuing (needed for async flows)
 3. **TLS certificates** for secure communication
 4. **Load balancer** for high availability
 
