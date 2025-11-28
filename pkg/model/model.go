@@ -144,12 +144,13 @@ type Keyset struct {
 // StepContext holds context information for a request processing step.
 type StepContext struct {
 	context.Context
-	Request    *http.Request
-	Body       []byte
-	Route      *Route
-	SubID      string
-	Role       Role
-	RespHeader http.Header
+	Request          *http.Request
+	Body             []byte
+	Route            *Route
+	SubID            string
+	Role             Role
+	RespHeader       http.Header
+	CallbackResponse []byte
 }
 
 // WithContext updates the existing StepContext with a new context.

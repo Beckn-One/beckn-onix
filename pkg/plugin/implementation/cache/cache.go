@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/beckn-one/beckn-onix/pkg/log"
+	"github.com/beckn-one/beckn-onix/pkg/plugin/definition"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -21,6 +22,9 @@ type RedisClient interface {
 	Del(ctx context.Context, keys ...string) *redis.IntCmd
 	FlushDB(ctx context.Context) *redis.StatusCmd
 	Ping(ctx context.Context) *redis.StatusCmd
+	Exists(ctx context.Context, keys ...string) *redis.IntCmd
+	Subscribe(ctx context.Context, channels ...string) *redis.PubSub
+	Publish(ctx context.Context, channel string, message interface{}) *redis.IntCmd
 	Close() error
 }
 
@@ -99,4 +103,50 @@ func (c *Cache) Delete(ctx context.Context, key string) error {
 // Clear removes all keys in the currently selected Redis database.
 func (c *Cache) Clear(ctx context.Context) error {
 	return c.Client.FlushDB(ctx).Err()
+}
+
+// Exists checks if a key exists in the cache.
+func (c *Cache) Exists(ctx context.Context, key string) (bool, error) {
+	val, err := c.Client.Exists(ctx, key).Result()
+	if err != nil {
+		return false, err
+	}
+	return val > 0, nil
+}
+
+// Subscribe subscribes to a Redis pub/sub channel.
+func (c *Cache) Subscribe(ctx context.Context, channel string) definition.Subscription {
+	return &redisSubscription{
+		pubsub: c.Client.Subscribe(ctx, channel),
+	}
+}
+
+// Publish publishes a message to a Redis pub/sub channel.
+func (c *Cache) Publish(ctx context.Context, channel string, message []byte) error {
+	return c.Client.Publish(ctx, channel, message).Err()
+}
+
+// redisSubscription wraps redis.PubSub to implement definition.Subscription
+type redisSubscription struct {
+	pubsub *redis.PubSub
+}
+
+// Channel returns the receive channel for messages
+func (s *redisSubscription) Channel() <-chan *definition.Message {
+	ch := make(chan *definition.Message)
+	go func() {
+		defer close(ch)
+		for msg := range s.pubsub.Channel() {
+			ch <- &definition.Message{
+				Channel: msg.Channel,
+				Payload: msg.Payload,
+			}
+		}
+	}()
+	return ch
+}
+
+// Close closes the subscription
+func (s *redisSubscription) Close() error {
+	return s.pubsub.Close()
 }

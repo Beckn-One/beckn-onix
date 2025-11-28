@@ -18,6 +18,30 @@ type Cache interface {
 
 	// Clear removes all values from the cache.
 	Clear(ctx context.Context) error
+
+	// Exists checks if a key exists in the cache.
+	Exists(ctx context.Context, key string) (bool, error)
+
+	// Subscribe subscribes to a Redis pub/sub channel.
+	Subscribe(ctx context.Context, channel string) Subscription
+
+	// Publish publishes a message to a Redis pub/sub channel.
+	Publish(ctx context.Context, channel string, message []byte) error
+}
+
+// Subscription represents a Redis pub/sub subscription
+type Subscription interface {
+	// Channel returns the receive channel for messages
+	Channel() <-chan *Message
+
+	// Close closes the subscription
+	Close() error
+}
+
+// Message represents a pub/sub message
+type Message struct {
+	Channel string
+	Payload string
 }
 
 // CacheProvider interface defines the contract for managing cache instances.

@@ -58,6 +58,13 @@ modules:
           id: router
           config:
             routingConfig: ./config/local-simple-routing.yaml
+        sync:
+          id: sync
+          config:
+            enabled: "false"
+            role: "bap_receiver"
+            timeout: "20s"
+            keyTTL: "25s"
         middleware:
           - id: reqpreprocessor
             config:
@@ -66,6 +73,7 @@ modules:
       steps:
         - validateSign
         - addRoute
+        - addOns
   
   - name: bapTxnCaller
     path: /bap/caller/
@@ -104,6 +112,13 @@ modules:
             routingConfig: ./config/local-simple-routing-BAPCaller.yaml
         signer:
           id: signer
+        sync:
+          id: sync
+          config:
+            enabled: "false"
+            role: "bap_caller"
+            timeout: "20s" 
+            keyTTL: "25s"
         middleware:
           - id: reqpreprocessor
             config:
@@ -112,6 +127,7 @@ modules:
       steps:
         - addRoute
         - sign
+        - addOns
   
   - name: bppTxnReceiver
     path: /bpp/receiver/

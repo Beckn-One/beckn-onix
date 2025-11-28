@@ -26,6 +26,7 @@ type stdHandler struct {
 	schemaValidator definition.SchemaValidator
 	router          definition.Router
 	publisher       definition.Publisher
+	sync            definition.Sync
 	SubscriberID    string
 	role            model.Role
 	httpClient      *http.Client
@@ -87,6 +88,15 @@ func (h *stdHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if err := step.Run(ctx); err != nil {
 			log.Errorf(ctx, err, "%T.run(%v):%v", step, ctx, err)
 			response.SendNack(ctx, w, err)
+			return
+		}
+
+		// Check if callback response is set (early exit for sync)
+		if ctx.CallbackResponse != nil {
+			log.Infof(ctx, "Callback response received, returning synchronously")
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			w.Write(ctx.CallbackResponse)
 			return
 		}
 	}
@@ -244,9 +254,47 @@ func (h *stdHandler) initPlugins(ctx context.Context, mgr PluginManager, cfg *Pl
 	if h.signer, err = loadPlugin(ctx, "Signer", cfg.Signer, mgr.Signer); err != nil {
 		return err
 	}
+	if h.sync, err = loadSyncPlugin(ctx, mgr, h.cache, h.role, cfg.Sync); err != nil {
+		return err
+	}
 
 	log.Debugf(ctx, "All required plugins successfully loaded for stdHandler")
 	return nil
+}
+
+// INFO: This method loads the Sync plugin using the provided PluginManager and cache.
+func loadSyncPlugin(ctx context.Context, mgr PluginManager, cache definition.Cache, role model.Role, cfg *plugin.Config) (definition.Sync, error) {
+	if cfg == nil {
+		log.Debugf(ctx, "Skipping Sync plugin: not configured")
+		return nil, nil
+	}
+
+	if cache == nil {
+		return nil, fmt.Errorf("failed to load Sync plugin: Cache plugin not configured")
+	}
+
+	// Determine role for sync plugin
+	// Check if role is explicitly defined in plugin config
+	roleStr := ""
+	if cfg.Config != nil {
+		if r, ok := cfg.Config["role"]; ok && r != "" {
+			roleStr = r
+		}
+	}
+
+	// If not in config, derive from handler role (fallback)
+	if roleStr == "" {
+		roleStr = string(role)
+		log.Warnf(ctx, "Sync plugin role not explicitly configured, falling back to handler role: %s", roleStr)
+	}
+
+	sync, err := mgr.Sync(ctx, cache, roleStr, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load Sync plugin (%s): %w", cfg.ID, err)
+	}
+
+	log.Infof(ctx, "Loaded Sync plugin: %s (role: %s)", cfg.ID, roleStr)
+	return sync, nil
 }
 
 // initSteps initializes and validates processing steps for the processor.
@@ -276,6 +324,8 @@ func (h *stdHandler) initSteps(ctx context.Context, mgr PluginManager, cfg *Conf
 			s, err = newValidateSchemaStep(h.schemaValidator)
 		case "addRoute":
 			s, err = newAddRouteStep(h.router)
+		case "addOns":
+			s, err = newAddOnsStep(h.sync)
 		default:
 			if customStep, exists := steps[step]; exists {
 				s = customStep

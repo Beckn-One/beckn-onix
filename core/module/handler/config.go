@@ -23,6 +23,7 @@ type PluginManager interface {
 	Registry(ctx context.Context, cfg *plugin.Config) (definition.RegistryLookup, error)
 	KeyManager(ctx context.Context, cache definition.Cache, rLookup definition.RegistryLookup, cfg *plugin.Config) (definition.KeyManager, error)
 	SchemaValidator(ctx context.Context, cfg *plugin.Config) (definition.SchemaValidator, error)
+	Sync(ctx context.Context, cache definition.Cache, role string, cfg *plugin.Config) (definition.Sync, error)
 }
 
 // Type defines different handler types for processing requests.
@@ -45,6 +46,7 @@ type PluginCfg struct {
 	KeyManager      *plugin.Config  `yaml:"keyManager,omitempty"`
 	Middleware      []plugin.Config `yaml:"middleware,omitempty"`
 	Steps           []plugin.Config
+	Sync            *plugin.Config `yaml:"sync,omitempty"`
 }
 
 // HttpClientConfig defines the configuration for the HTTP transport layer.

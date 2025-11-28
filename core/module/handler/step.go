@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -209,4 +210,81 @@ func (s *addRouteStep) Run(ctx *model.StepContext) error {
 		URL:         route.URL,
 	}
 	return nil
+}
+
+// INFO: addOnsStep represents a generic container for optional add-on features
+type addOnsStep struct {
+	sync definition.Sync
+}
+
+func newAddOnsStep(sync definition.Sync) (definition.Step, error) {
+	return &addOnsStep{sync: sync}, nil
+}
+
+func (s *addOnsStep) Run(ctx *model.StepContext) error {
+	if s.sync == nil {
+		log.Debugf(ctx, "Sync plugin not configured")
+	} else {
+		s.executeSyncPlugin(ctx)
+	}
+
+	//INFO: Add handling for new plugins here
+	return nil
+}
+
+func (s *addOnsStep) executeSyncPlugin(ctx *model.StepContext) error {
+	txnID, err := extractTransactionID(ctx.Body)
+	if err != nil {
+		log.Warnf(ctx, "Failed to extract transaction ID, skipping sync plugin: %v", err)
+		return nil
+	}
+
+	callbackData, skipForwarding, err := s.sync.Execute(ctx, txnID, ctx.Body)
+	if err != nil {
+		log.Warnf(ctx, "SYNC PLUGIN FAILED for txnID: %s | Error: %v | FALLING BACK TO ASYNC FLOW", txnID, err)
+		return nil
+	}
+
+	// INFO: BAP Caller case
+	if callbackData != nil {
+		log.Infof(ctx, "SYNC SUCCESS: Received callback data for txnID: %s ", txnID)
+		ctx.CallbackResponse = callbackData
+		return nil
+	}
+
+	// INFO: BAP Receiver case
+	if skipForwarding {
+		log.Infof(ctx, "SYNC SUCCESS: Callback published to waiting caller for txnID: %s", txnID)
+		ctx.Route = nil
+		return nil
+	}
+
+	log.Debugf(ctx, "Sync plugin completed - no sync operation needed for txnID: %s (no waiting caller) - continuing with async flow", txnID)
+	return nil
+}
+
+// extractTransactionID extracts transaction_id from the request body
+func extractTransactionID(body []byte) (string, error) {
+	var data map[string]interface{}
+	if err := json.Unmarshal(body, &data); err != nil {
+		return "", fmt.Errorf("failed to parse body: %w", err)
+	}
+
+	// Try context.transaction_id first (standard Beckn location)
+	if context, ok := data["context"].(map[string]interface{}); ok {
+		if txnID, ok := context["transaction_id"].(string); ok && txnID != "" {
+			return txnID, nil
+		}
+	}
+
+	// Fallback: Try message.order.id or other common locations
+	if message, ok := data["message"].(map[string]interface{}); ok {
+		if order, ok := message["order"].(map[string]interface{}); ok {
+			if orderID, ok := order["id"].(string); ok && orderID != "" {
+				return orderID, nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("transaction_id not found in body")
 }

@@ -403,6 +403,31 @@ func (m *Manager) DeDiRegistry(ctx context.Context, cfg *Config) (definition.Reg
 	return registry, nil
 }
 
+func (m *Manager) Sync(ctx context.Context, cache definition.Cache, role string, cfg *Config) (definition.Sync, error) {
+	// Load the sync provider from loaded plugins
+	sp, err := provider[definition.SyncProvider](m.plugins, cfg.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load provider for %s: %w", cfg.ID, err)
+	}
+
+	// Create sync instance with cache dependency
+	sync, closer, err := sp.New(ctx, cache, role, cfg.Config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create sync instance: %w", err)
+	}
+
+	// Register cleanup function
+	if closer != nil {
+		m.closers = append(m.closers, func() {
+			if err := closer(); err != nil {
+				panic(err)
+			}
+		})
+	}
+
+	return sync, nil
+}
+
 // Validator implements handler.PluginManager.
 func (m *Manager) Validator(ctx context.Context, cfg *Config) (definition.SchemaValidator, error) {
 	panic("unimplemented")
