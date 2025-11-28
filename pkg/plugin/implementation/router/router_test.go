@@ -124,7 +124,7 @@ func TestLoadRules(t *testing.T) {
 	// Expected router.rules map structure based on the yaml.
 	expectedRules := map[string]map[string]map[string]*model.Route{
 		"ONDC:TRV10": {
-			"2.0.0": {
+			"1.1.0": {
 				"search":    {TargetType: targetTypeURL, URL: parseURL(t, "https://mock_gateway.com/v2/ondc/search")},
 				"init":      {TargetType: targetTypeBAP, URL: parseURL(t, "https://mock_bpp.com/v2/ondc/init")},
 				"select":    {TargetType: targetTypeBAP, URL: parseURL(t, "https://mock_bpp.com/v2/ondc/select")},
@@ -291,7 +291,7 @@ func TestValidateRulesFailure(t *testing.T) {
 					Endpoints: []string{"search", "select"},
 				},
 			},
-			wantErr: "invalid rule: domain, version, and targetType are required",
+			wantErr: "invalid rule: domain is required for version 1.0.0",
 		},
 		{
 			name: "Missing version",
@@ -305,7 +305,7 @@ func TestValidateRulesFailure(t *testing.T) {
 					Endpoints: []string{"search", "select"},
 				},
 			},
-			wantErr: "invalid rule: domain, version, and targetType are required",
+			wantErr: "invalid rule: version and targetType are required",
 		},
 		{
 			name: "Missing targetType",
@@ -319,7 +319,7 @@ func TestValidateRulesFailure(t *testing.T) {
 					Endpoints: []string{"search", "select"},
 				},
 			},
-			wantErr: "invalid rule: domain, version, and targetType are required",
+			wantErr: "invalid rule: version and targetType are required",
 		},
 		{
 			name: "Invalid targetType",
@@ -438,37 +438,37 @@ func TestRouteSuccess(t *testing.T) {
 			name:       "Valid domain, version, and endpoint (bpp routing with gateway URL)",
 			configFile: "bap_caller.yaml",
 			url:        "https://example.com/v1/ondc/search",
-			body:       `{"context": {"domain": "ONDC:TRV10", "version": "2.0.0"}}`,
+			body:       `{"context": {"domain": "ONDC:TRV10", "version": "1.1.0"}}`,
 		},
 		{
 			name:       "Valid domain, version, and endpoint (bpp routing with bpp_uri)",
 			configFile: "bap_caller.yaml",
 			url:        "https://example.com/v1/ondc/select",
-			body:       `{"context": {"domain": "ONDC:TRV10", "version": "2.0.0", "bpp_uri": "https://bpp1.example.com"}}`,
+			body:       `{"context": {"domain": "ONDC:TRV10", "version": "1.1.0", "bpp_uri": "https://bpp1.example.com"}}`,
 		},
 		{
 			name:       "Valid domain, version, and endpoint (url routing)",
 			configFile: "bpp_receiver.yaml",
 			url:        "https://example.com/v1/ondc/select",
-			body:       `{"context": {"domain": "ONDC:TRV10", "version": "2.0.0"}}`,
+			body:       `{"context": {"domain": "ONDC:TRV10", "version": "1.1.0"}}`,
 		},
 		{
 			name:       "Valid domain, version, and endpoint (publisher routing)",
 			configFile: "bpp_receiver.yaml",
 			url:        "https://example.com/v1/ondc/search",
-			body:       `{"context": {"domain": "ONDC:TRV10", "version": "2.0.0"}}`,
+			body:       `{"context": {"domain": "ONDC:TRV10", "version": "1.1.0"}}`,
 		},
 		{
 			name:       "Valid domain, version, and endpoint (bap routing with bap_uri)",
 			configFile: "bpp_caller.yaml",
 			url:        "https://example.com/v1/ondc/on_select",
-			body:       `{"context": {"domain": "ONDC:TRV10", "version": "2.0.0", "bap_uri": "https://bap1.example.com"}}`,
+			body:       `{"context": {"domain": "ONDC:TRV10", "version": "1.1.0", "bap_uri": "https://bap1.example.com"}}`,
 		},
 		{
 			name:       "Valid domain, version, and endpoint (bpp routing with bpp_uri)",
 			configFile: "bap_receiver.yaml",
 			url:        "https://example.com/v1/ondc/on_select",
-			body:       `{"context": {"domain": "ONDC:TRV10", "version": "2.0.0", "bpp_uri": "https://bpp1.example.com"}}`,
+			body:       `{"context": {"domain": "ONDC:TRV10", "version": "1.1.0", "bpp_uri": "https://bpp1.example.com"}}`,
 		},
 	}
 
@@ -504,35 +504,35 @@ func TestRouteFailure(t *testing.T) {
 			name:       "Unsupported endpoint",
 			configFile: "bpp_receiver.yaml",
 			url:        "https://example.com/v1/ondc/unsupported",
-			body:       `{"context": {"domain": "ONDC:TRV11", "version": "2.0.0"}}`,
-			wantErr:    "endpoint 'unsupported' is not supported for domain ONDC:TRV11 and version 2.0.0",
+			body:       `{"context": {"domain": "ONDC:TRV11", "version": "1.1.0"}}`,
+			wantErr:    "endpoint 'unsupported' is not supported for domain ONDC:TRV11 and version 1.1.0",
 		},
 		{
 			name:       "No matching rule",
 			configFile: "bpp_receiver.yaml",
 			url:        "https://example.com/v1/ondc/select",
-			body:       `{"context": {"domain": "ONDC:SRV11", "version": "2.0.0"}}`,
+			body:       `{"context": {"domain": "ONDC:SRV11", "version": "1.1.0"}}`,
 			wantErr:    "no routing rules found for domain ONDC:SRV11",
 		},
 		{
 			name:       "Missing bap_uri for bap routing",
 			configFile: "bpp_caller.yaml",
 			url:        "https://example.com/v1/ondc/on_search",
-			body:       `{"context": {"domain": "ONDC:TRV10", "version": "2.0.0"}}`,
+			body:       `{"context": {"domain": "ONDC:TRV10", "version": "1.1.0"}}`,
 			wantErr:    "could not determine destination for endpoint 'on_search': neither request contained a BAP URI nor was a default URL configured in routing rules",
 		},
 		{
 			name:       "Missing bpp_uri for bpp routing",
 			configFile: "bap_caller.yaml",
 			url:        "https://example.com/v1/ondc/select",
-			body:       `{"context": {"domain": "ONDC:TRV10", "version": "2.0.0"}}`,
+			body:       `{"context": {"domain": "ONDC:TRV10", "version": "1.1.0"}}`,
 			wantErr:    "could not determine destination for endpoint 'select': neither request contained a BPP URI nor was a default URL configured in routing rules",
 		},
 		{
 			name:       "Invalid bpp_uri format in request",
 			configFile: "bap_caller.yaml",
 			url:        "https://example.com/v1/ondc/select",
-			body:       `{"context": {"domain": "ONDC:TRV10", "version": "2.0.0", "bpp_uri": "htp:// invalid-url"}}`, // Invalid scheme (htp instead of http)
+			body:       `{"context": {"domain": "ONDC:TRV10", "version": "1.1.0", "bpp_uri": "htp:// invalid-url"}}`, // Invalid scheme (htp instead of http)
 			wantErr:    `invalid BPP URI - htp:// invalid-url in request body for select: parse "htp:// invalid-url": invalid character " " in host name`,
 		},
 	}
@@ -565,7 +565,7 @@ func TestExcludeAction(t *testing.T) {
 			configFile: "exclude_action_true.yaml",
 			expectedRoutes: map[string]map[string]map[string]*model.Route{
 				"ONDC:TRV10": {
-					"2.0.0": {
+					"1.1.0": {
 						"search": {TargetType: targetTypeURL, URL: parseURL(t, "https://services-backend.com/v2/ondc")},
 						"init":   {TargetType: targetTypeURL, URL: parseURL(t, "https://services-backend.com/v2/ondc")},
 					},
@@ -577,7 +577,7 @@ func TestExcludeAction(t *testing.T) {
 			configFile: "exclude_action_false.yaml",
 			expectedRoutes: map[string]map[string]map[string]*model.Route{
 				"ONDC:TRV10": {
-					"2.0.0": {
+					"1.1.0": {
 						"search": {TargetType: targetTypeURL, URL: parseURL(t, "https://services-backend.com/v2/ondc/search")},
 						"init":   {TargetType: targetTypeURL, URL: parseURL(t, "https://services-backend.com/v2/ondc/init")},
 					},
@@ -589,7 +589,7 @@ func TestExcludeAction(t *testing.T) {
 			configFile: "exclude_action_default.yaml",
 			expectedRoutes: map[string]map[string]map[string]*model.Route{
 				"ONDC:TRV10": {
-					"2.0.0": {
+					"1.1.0": {
 						"search": {TargetType: targetTypeURL, URL: parseURL(t, "https://services-backend.com/v2/ondc/search")},
 						"init":   {TargetType: targetTypeURL, URL: parseURL(t, "https://services-backend.com/v2/ondc/init")},
 					},
@@ -630,7 +630,7 @@ func TestExcludeActionWithNonURLTargetTypes(t *testing.T) {
 			configFile: "exclude_action_bpp.yaml",
 			expectedRoutes: map[string]map[string]map[string]*model.Route{
 				"ONDC:TRV10": {
-					"2.0.0": {
+					"1.1.0": {
 						"search": {TargetType: targetTypeBPP, URL: parseURL(t, "https://mock_bpp.com/v2/ondc/search")},
 						"init":   {TargetType: targetTypeBPP, URL: parseURL(t, "https://mock_bpp.com/v2/ondc/init")},
 					},
@@ -642,7 +642,7 @@ func TestExcludeActionWithNonURLTargetTypes(t *testing.T) {
 			configFile: "exclude_action_bap.yaml",
 			expectedRoutes: map[string]map[string]map[string]*model.Route{
 				"ONDC:TRV10": {
-					"2.0.0": {
+					"1.1.0": {
 						"search": {TargetType: targetTypeBAP, URL: parseURL(t, "https://mock_bap.com/v2/ondc/search")},
 						"init":   {TargetType: targetTypeBAP, URL: parseURL(t, "https://mock_bap.com/v2/ondc/init")},
 					},
@@ -654,7 +654,7 @@ func TestExcludeActionWithNonURLTargetTypes(t *testing.T) {
 			configFile: "exclude_action_publisher.yaml",
 			expectedRoutes: map[string]map[string]map[string]*model.Route{
 				"ONDC:TRV10": {
-					"2.0.0": {
+					"1.1.0": {
 						"search": {TargetType: targetTypePublisher, PublisherID: "test_topic", URL: nil},
 						"init":   {TargetType: targetTypePublisher, PublisherID: "test_topic", URL: nil},
 					},
@@ -680,5 +680,114 @@ func TestExcludeActionWithNonURLTargetTypes(t *testing.T) {
 				t.Errorf("Loaded rules mismatch for %s.\nGot:\n%#v\nWant:\n%#v", tt.name, router.rules, tt.expectedRoutes)
 			}
 		})
+	}
+}
+
+// TestV2RouteSuccess tests v2 routing with domain-agnostic behavior
+func TestV2RouteSuccess(t *testing.T) {
+	ctx := context.Background()
+
+	tests := []struct {
+		name       string
+		configFile string
+		url        string
+		body       string
+	}{
+		{
+			name:       "v2 BAP caller - domain ignored",
+			configFile: "v2_bap_caller.yaml",
+			url:        "https://example.com/v2/search",
+			body:       `{"context": {"domain": "any_domain", "version": "2.0.0"}}`,
+		},
+		{
+			name:       "v2 BPP receiver - domain ignored",
+			configFile: "v2_bpp_receiver.yaml",
+			url:        "https://example.com/v2/select",
+			body:       `{"context": {"domain": "different_domain", "version": "2.0.0"}}`,
+		},
+		{
+			name:       "v2 request without domain field",
+			configFile: "v2_bap_caller.yaml",
+			url:        "https://example.com/v2/search",
+			body:       `{"context": {"version": "2.0.0"}}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			router, _, rulesFilePath := setupRouter(t, tt.configFile)
+			defer os.RemoveAll(filepath.Dir(rulesFilePath))
+
+			parsedURL, _ := url.Parse(tt.url)
+			_, err := router.Route(ctx, parsedURL, []byte(tt.body))
+
+			if err != nil {
+				t.Errorf("router.Route() = %v, want nil (domain should be ignored for v2)", err)
+			}
+		})
+	}
+}
+
+// TestV2ConflictingRules tests that conflicting v2 rules are detected at load time
+func TestV2ConflictingRules(t *testing.T) {
+	router := &Router{
+		rules: make(map[string]map[string]map[string]*model.Route),
+	}
+
+	configDir := t.TempDir()
+	conflictingConfig := `routingRules:
+  - version: 2.0.0
+    targetType: bap
+    endpoints:
+      - on_search
+  - version: 2.0.0
+    targetType: bap
+    endpoints:
+      - on_search
+`
+	rulesPath := filepath.Join(configDir, "conflicting_rules.yaml")
+	if err := os.WriteFile(rulesPath, []byte(conflictingConfig), 0644); err != nil {
+		t.Fatalf("WriteFile() err = %v, want nil", err)
+	}
+	defer os.RemoveAll(configDir)
+
+	err := router.loadRules(rulesPath)
+	if err == nil {
+		t.Error("loadRules() with conflicting v2 rules should return error, got nil")
+	}
+
+	expectedErr := "duplicate endpoint 'on_search' found for version 2.0.0"
+	if err != nil && !strings.Contains(err.Error(), expectedErr) {
+		t.Errorf("loadRules() error = %v, want error containing %q", err, expectedErr)
+	}
+}
+
+// TestV1DomainRequired tests that domain is required for v1 configs
+func TestV1DomainRequired(t *testing.T) {
+	router := &Router{
+		rules: make(map[string]map[string]map[string]*model.Route),
+	}
+
+	configDir := t.TempDir()
+	v1ConfigWithoutDomain := `routingRules:
+  - version: 1.0.0
+    targetType: bap
+    endpoints:
+      - on_search
+`
+	rulesPath := filepath.Join(configDir, "v1_no_domain.yaml")
+	if err := os.WriteFile(rulesPath, []byte(v1ConfigWithoutDomain), 0644); err != nil {
+		t.Fatalf("WriteFile() err = %v, want nil", err)
+	}
+	defer os.RemoveAll(configDir)
+
+	err := router.loadRules(rulesPath)
+	if err == nil {
+		t.Error("loadRules() with v1 config without domain should fail, got nil")
+	}
+
+	expectedErr := "invalid rule: domain is required for version 1.0.0"
+	if err != nil && !strings.Contains(err.Error(), expectedErr) {
+		t.Errorf("loadRules() error = %v, want error containing %q", err, expectedErr)
 	}
 }

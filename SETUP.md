@@ -88,14 +88,53 @@ This will automatically:
 
 **Key Management:** Uses `simplekeymanager` with embedded keys - no Vault setup required!
 
-**Note:** Extract schemas before running: `unzip schemas.zip` (required for schema validation) and before running the automated setup, build the adapter image ,update docker-compose-adapter.yaml to use the correct image (optional)
+**Note:** 
+- **Schema Validation**: Extract schemas before running: `unzip schemas.zip` (required for `schemavalidator` plugin)
+- **Alternative**: You can use `schemav2validator` plugin instead, which fetches schemas from a URL and doesn't require local schema extraction. See [CONFIG.md](CONFIG.md) for more configuration details.
+- **Optional**: Before running the automated setup, build the adapter image and update `docker-compose-adapter.yaml` to use the correct image
 
 ```bash
 # from the repository root
 docker build -f Dockerfile.adapter-with-plugins -t beckn-onix:latest .
 ```
 
-### Option 2: Complete Beckn Network
+### Option 2: Beckn One Network Setup
+
+For a local setup using Beckn One with DeDI-Registry and Catalog Discovery:
+
+```bash
+cd beckn-onix/install
+chmod +x beckn-onix.sh
+./beckn-onix.sh
+
+# Choose option 3: "Set up a network on local machine with Beckn One (DeDI-Registry, Catalog Discovery)"
+```
+
+This will automatically:
+- Install required packages (Docker, docker-compose, jq)
+- Build ONIX adapter plugins
+- Start Redis
+- Start ONIX adapters for BAP and BPP with Beckn One configuration
+- Start Sandbox containers for BAP and BPP
+
+**Services Started:**
+- Redis: localhost:6379
+- ONIX Adapter (BAP): http://localhost:8081
+- ONIX Adapter (BPP): http://localhost:8082
+- Sandbox BAP: http://localhost:3001
+- Sandbox BPP: http://localhost:3002
+
+**Key Features:**
+- Uses Beckn One (DeDI-Registry) for registry services
+- Pre-configured keys in YAML configuration files
+- No local registry or gateway deployment required
+
+**Note:** 
+- **Schema Validation**: Extract schemas before running: `unzip schemas.zip` (required for `schemavalidator` plugin)
+- **Alternative**: You can use `schemav2validator` plugin instead, which fetches schemas from a URL and doesn't require local schema extraction. See [CONFIG.md](CONFIG.md) for more configuration details.
+
+### Option 3: Complete Beckn Network
+
 
 For a full local Beckn network with all components:
 
@@ -104,7 +143,8 @@ cd beckn-onix/install
 chmod +x beckn-onix.sh
 ./beckn-onix.sh
 
-# Choose option 3: "Set up a network on your local machine"
+# Choose option 4: "Set up a network on local machine with local registry and gateway (without Beckn One)"
+
 ```
 
 This will automatically:
@@ -125,7 +165,10 @@ This will automatically:
 - ONIX Adapter: http://localhost:8081
 - Redis: localhost:6379
 
-**Note:** Extract schemas before running: `unzip schemas.zip` (required for schema validation) and before running the automated full-network setup, build the adapter image , update docker-compose-adapter.yaml to use the correct image(optional)
+**Note:** 
+- **Schema Validation**: Extract schemas before running: `unzip schemas.zip` (required for `schemavalidator` plugin)
+- **Alternative**: You can use `schemav2validator` plugin instead, which fetches schemas from a URL and doesn't require local schema extraction. See [CONFIG.md](CONFIG.md) for more configuration details.
+- **Optional**: Before running the automated full-network setup, build the adapter image and update `docker-compose-adapter.yaml` to use the correct image
 
 ```bash
 # from the repository root
@@ -193,6 +236,7 @@ This creates `.so` files in the `plugins/` directory:
 - `signer.so` - Message signing
 - `signvalidator.so` - Signature validation
 - `schemavalidator.so` - JSON schema validation
+- `schemav2validator.so` - OpenAPI 3.x schema validation
 - `keymanager.so` - Vault integration
 - `simplekeymanager.so` - Simple key management (no Vault)
 - `publisher.so` - RabbitMQ publishing
@@ -865,28 +909,38 @@ router:
 
 ### Routing Rules Configuration
 
+**For complete routing configuration documentation including v2 domain-agnostic routing, see [CONFIG.md - Routing Configuration](CONFIG.md#routing-configuration).**
+
+Basic example:
+
 ```yaml
 routingRules:
+  # v1.x.x - domain is required
   - domain: "ONDC:RET10"
     version: "1.0.0"
     targetType: "url"  # or "publisher"
     target:
       url: "https://seller.example.com/beckn"
-      # OR for async
-      # queueName: "retail_queue"
-      # routingKey: "retail.*"
     endpoints:
       - search
       - select
       - init
       - confirm
-    headers:  # Optional additional headers
-      X-Custom-Header: "value"
-    timeout: 60  # seconds
-    retryPolicy:
-      maxRetries: 3
-      backoff: exponential
+
+  # v2.x.x - domain is optional (domain-agnostic routing)
+  - version: "2.0.0"
+    targetType: "url"
+    target:
+      url: "https://seller.example.com/v2/beckn"
+    endpoints:
+      - search
+      - select
 ```
+
+**Key Points**:
+- **v1.x.x**: Domain field is required and used for routing
+- **v2.x.x**: Domain field is optional and ignored (domain-agnostic)
+- See CONFIG.md for target types: `url`, `bpp`, `bap`, `publisher`
 
 ### Processing Steps
 

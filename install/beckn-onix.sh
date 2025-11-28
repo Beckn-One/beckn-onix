@@ -928,6 +928,58 @@ install_bap_adapter() {
 install_bpp_adapter() {
     install_adapter "BPP"
 }
+
+# Function to install Beckn One Adapter (Option 3)
+install_beckn_one_adapter() {
+    echo "${GREEN}................Setting up network with Beckn One................${NC}"
+    
+    # Create schemas directory if not exists
+    if [ ! -d "schemas" ]; then
+        mkdir -p schemas
+        echo -e "${GREEN}✓ Created schemas directory${NC}"
+    fi
+
+    echo "${GREEN}................Building plugins for ONIX Adapter................${NC}"
+    
+    # Build plugins
+    cd ..
+    if [ -f "./install/build-plugins.sh" ]; then
+        chmod +x ./install/build-plugins.sh
+        ./install/build-plugins.sh
+        if [ $? -eq 0 ]; then
+            echo "${GREEN}✓ Plugins built successfully${NC}"
+        else
+            echo "${RED}Error: Plugin build failed${NC}"
+            exit 1
+        fi
+    else
+        echo "${RED}Error: install/build-plugins.sh not found${NC}"
+        exit 1
+    fi
+    cd install
+    
+    echo "${GREEN}................Starting Redis and Beckn One Adapters................${NC}"
+    
+    # Start Redis first
+    start_support_services
+    
+    # Start Beckn One adapters (onix-bap, onix-bpp, sandbox-bap, sandbox-bpp)
+    start_container $adapter_beckn_one_docker_compose_file "onix-bap"
+    start_container $adapter_beckn_one_docker_compose_file "onix-bpp"
+    start_container $adapter_beckn_one_docker_compose_file "sandbox-bap"
+    start_container $adapter_beckn_one_docker_compose_file "sandbox-bpp"
+    
+    sleep 10
+    
+    echo "${GREEN}✓ Beckn One network setup complete${NC}"
+    echo ""
+    echo "${BLUE}Services running:${NC}"
+    echo "  - ONIX BAP Adapter: http://localhost:8081"
+    echo "  - ONIX BPP Adapter: http://localhost:8082"
+    echo "  - Sandbox BAP: http://localhost:3001"
+    echo "  - Sandbox BPP: http://localhost:3002"
+    echo "  - Redis: localhost:6379"
+}
 # MAIN SCRIPT STARTS HERE
 
 echo "Welcome to Beckn-ONIX!"
@@ -941,29 +993,35 @@ echo "Checking prerequisites of Beckn-ONIX deployment"
 check_docker_permissions
 
 echo "Beckn-ONIX is a platform that helps you quickly launch and configure beckn-enabled networks."
-echo -e "\nWhat would you like to do?\n1. Join an existing network\n2. Create new production network\n3. Set up a network on your local machine\n4. Merge multiple networks\n5. Configure Existing Network\n6. Update/Upgrade Application\n(Press Ctrl+C to exit)"
+echo -e "\nWhat would you like to do?\n1. Join an existing network\n2. Create new production network\n3. Set up a network on local machine with Beckn One (DeDI-Registry, Catalog Discovery)\n4. Set up a network on local machine with local registry and gateway (without Beckn One)\n5. Merge multiple networks\n6. Configure Existing Network\n7. Update/Upgrade Application\n(Press Ctrl+C to exit)"
 read -p "Enter your choice: " choice
 
-validate_input "$choice" 6
+validate_input "$choice" 7
 if [[ $? -ne 0 ]]; then
     restart_script # Restart the script if input is invalid
 fi
 
 if [[ $choice -eq 3 ]]; then
-    echo "Installing all components on the local machine"
+    echo "${GREEN}Setting up network with Beckn One${NC}"
+    echo "${BLUE}This setup uses Beckn One (DeDI-Registry) for registry and catalog discovery${NC}"
+    echo ""
+    install_package
+    install_beckn_one_adapter
+elif [[ $choice -eq 4 ]]; then
+    echo "Installing network with local registry and gateway (without Beckn One)"
     install_package
     install_registry
     install_gateway
     install_bap_protocol_server
     install_bpp_protocol_server_with_sandbox
     install_adapter "BOTH"
-elif [[ $choice -eq 4 ]]; then
+elif [[ $choice -eq 5 ]]; then
     echo "Determining the platforms available based on the initial choice"
     mergingNetworks
-elif [[ $choice -eq 5 ]]; then
+elif [[ $choice -eq 6 ]]; then
     echo "${BoldGreen}Currently this feature is not available in this distribution of Beckn ONIX${NC}"
     restart_script
-elif [[ $choice -eq 6 ]]; then
+elif [[ $choice -eq 7 ]]; then
     update_network
 else
     # Determine the platforms available based on the initial choice

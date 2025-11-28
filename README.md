@@ -151,7 +151,7 @@ Resources:
 
 #### 3. **Plugin Types**
 - **Cache**: Redis-based response caching 
-- **Router**: YAML-based routing rules engine for request forwarding
+- **Router**: YAML-based routing rules engine for request forwarding (supports domain-agnostic routing for Beckn v2.x.x)
 - **Signer**: Ed25519 digital signature creation for outgoing requests
 - **SignValidator**: Ed25519 signature validation for incoming requests
 - **SchemaValidator**: JSON schema validation
@@ -239,12 +239,18 @@ This automated script will:
 - Start ONIX adapter in Docker
 - Create environment configuration
 
-**Note:** Extract schemas before running: `unzip schemas.zip` (required for schema validation) and before running the automated setup, build the adapter image if required ,update docker-compose-adapter.yaml to use the correct onix image 
+**Note:**
+- **Schema Validation**: Extract schemas before running: `unzip schemas.zip` (required for `schemavalidator` plugin)
+- **Alternative**: You can use `schemav2validator` plugin instead, which fetches schemas from a URL and doesn't require local schema extraction. See [CONFIG.md](CONFIG.md) for more configuration details.
+- **Optional**: Before running the automated setup, build the adapter image and update `docker-compose-adapter.yaml` to use the correct image
 
 ```bash
 # from the repository root
 docker build -f Dockerfile.adapter-with-plugins -t beckn-onix:latest .
 ```
+
+**For detailed setup instructions, see [SETUP.md](SETUP.md)**
+
 **Services Started:**
 - Redis: localhost:6379
 - ONIX Adapter: http://localhost:8081
