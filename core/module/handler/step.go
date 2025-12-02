@@ -277,15 +277,11 @@ func (s *addRouteStep) Run(ctx *model.StepContext) error {
 func extractSchemaVersion(body []byte) string {
 	type contextEnvelope struct {
 		Context struct {
-			Version     string `json:"version"`
-			CoreVersion string `json:"core_version"`
+			Version string `json:"version"`
 		} `json:"context"`
 	}
 	var payload contextEnvelope
 	if err := json.Unmarshal(body, &payload); err == nil {
-		if payload.Context.CoreVersion != "" {
-			return payload.Context.CoreVersion
-		}
 		if payload.Context.Version != "" {
 			return payload.Context.Version
 		}

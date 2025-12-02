@@ -17,6 +17,7 @@ import (
 	"github.com/beckn-one/beckn-onix/core/module/handler"
 	"github.com/beckn-one/beckn-onix/pkg/log"
 	"github.com/beckn-one/beckn-onix/pkg/plugin"
+	"github.com/beckn-one/beckn-onix/pkg/plugin/implementation/otelsetup"
 	"github.com/beckn-one/beckn-onix/pkg/telemetry"
 )
 
@@ -93,6 +94,23 @@ func validateConfig(cfg *Config) error {
 	return nil
 }
 
+// initPlugins initializes application-level plugins including telemetry.
+func initPlugins(ctx context.Context, mgr *plugin.Manager, telemetryCfg *telemetry.Config) (*telemetry.Provider, error) {
+	if telemetryCfg == nil {
+		log.Info(ctx, "Telemetry config not provided; skipping OpenTelemetry setup")
+		return nil, nil
+	}
+
+	log.Infof(ctx, "Initializing telemetry via plugin id=otelsetup")
+	pluginConfig := otelsetup.ToPluginConfig(telemetryCfg)
+
+	otelProvider, err := mgr.OtelSetup(ctx, pluginConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize telemetry plugin: %w", err)
+	}
+	return otelProvider, nil
+}
+
 // newServer creates and initializes the HTTP server.
 func newServer(ctx context.Context, mgr handler.PluginManager, cfg *Config, otelProvider *telemetry.Provider) (http.Handler, error) {
 	mux := http.NewServeMux()
@@ -134,29 +152,10 @@ func run(ctx context.Context, configPath string) error {
 	closers = append(closers, closer)
 	log.Debug(ctx, "Plugin manager loaded.")
 
-	// Initialize telemetry via plugin.
-	var otelProvider *telemetry.Provider
-	if cfg.Telemetry == nil {
-		log.Info(ctx, "Telemetry config not provided; skipping OpenTelemetry setup")
-	} else {
-		log.Infof(ctx, "Initializing telemetry via plugin id=otelsetup")
-
-		// Convert telemetry.Config to plugin.Config
-		pluginConfig := &plugin.Config{
-			ID: "otelsetup",
-			Config: map[string]string{
-				"serviceName":    cfg.Telemetry.ServiceName,
-				"serviceVersion": cfg.Telemetry.ServiceVersion,
-				"enableMetrics":  fmt.Sprintf("%t", cfg.Telemetry.EnableMetrics),
-				"environment":    cfg.Telemetry.Environment,
-			},
-		}
-
-		otelProvider, err = mgr.OtelSetup(ctx, pluginConfig)
-		if err != nil {
-			return fmt.Errorf("failed to initialize telemetry plugin: %w", err)
-		}
-		// Note: The closer is now handled by the plugin manager
+	// Initialize plugins including telemetry.
+	otelProvider, err := initPlugins(ctx, mgr, cfg.Telemetry)
+	if err != nil {
+		return fmt.Errorf("failed to initialize plugins: %w", err)
 	}
 
 	// Initialize HTTP server.
