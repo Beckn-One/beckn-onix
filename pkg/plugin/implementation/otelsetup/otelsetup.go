@@ -22,8 +22,26 @@ import (
 // behind the MetricsProvider interface.
 type Setup struct{}
 
-// ToPluginConfig converts telemetry.Config to plugin.Config format.
-func ToPluginConfig(cfg *telemetry.Config) *plugin.Config {
+// Config represents OpenTelemetry related configuration.
+type Config struct {
+	ServiceName    string `yaml:"serviceName"`
+	ServiceVersion string `yaml:"serviceVersion"`
+	EnableMetrics  bool   `yaml:"enableMetrics"`
+	Environment    string `yaml:"environment"`
+}
+
+// DefaultConfig returns sensible defaults for telemetry configuration.
+func DefaultConfig() *Config {
+	return &Config{
+		ServiceName:    "beckn-onix",
+		ServiceVersion: "dev",
+		EnableMetrics:  true,
+		Environment:    "development",
+	}
+}
+
+// ToPluginConfig converts Config to plugin.Config format.
+func ToPluginConfig(cfg *Config) *plugin.Config {
 	return &plugin.Config{
 		ID: "otelsetup",
 		Config: map[string]string{
@@ -38,20 +56,20 @@ func ToPluginConfig(cfg *telemetry.Config) *plugin.Config {
 // New initializes the underlying telemetry provider. The returned provider
 // exposes the HTTP handler and shutdown hooks that the core application can
 // manage directly.
-func (Setup) New(ctx context.Context, cfg *telemetry.Config) (*telemetry.Provider, error) {
+func (Setup) New(ctx context.Context, cfg *Config) (*telemetry.Provider, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("telemetry config cannot be nil")
 	}
 
 	// Apply defaults if fields are empty
 	if cfg.ServiceName == "" {
-		cfg.ServiceName = telemetry.DefaultConfig().ServiceName
+		cfg.ServiceName = DefaultConfig().ServiceName
 	}
 	if cfg.ServiceVersion == "" {
-		cfg.ServiceVersion = telemetry.DefaultConfig().ServiceVersion
+		cfg.ServiceVersion = DefaultConfig().ServiceVersion
 	}
 	if cfg.Environment == "" {
-		cfg.Environment = telemetry.DefaultConfig().Environment
+		cfg.Environment = DefaultConfig().Environment
 	}
 
 	if !cfg.EnableMetrics {

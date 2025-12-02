@@ -25,7 +25,7 @@ import (
 type Config struct {
 	AppName       string                `yaml:"appName"`
 	Log           log.Config            `yaml:"log"`
-	Telemetry     *telemetry.Config     `yaml:"telemetry"`
+	Telemetry     *otelsetup.Config     `yaml:"telemetry"`
 	PluginManager *plugin.ManagerConfig `yaml:"pluginManager"`
 	Modules       []module.Config       `yaml:"modules"`
 	HTTP          httpConfig            `yaml:"http"`
@@ -95,7 +95,7 @@ func validateConfig(cfg *Config) error {
 }
 
 // initPlugins initializes application-level plugins including telemetry.
-func initPlugins(ctx context.Context, mgr *plugin.Manager, telemetryCfg *telemetry.Config) (*telemetry.Provider, error) {
+func initPlugins(ctx context.Context, mgr *plugin.Manager, telemetryCfg *otelsetup.Config) (*telemetry.Provider, error) {
 	if telemetryCfg == nil {
 		log.Info(ctx, "Telemetry config not provided; skipping OpenTelemetry setup")
 		return nil, nil

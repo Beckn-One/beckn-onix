@@ -22,8 +22,8 @@ func (m metricsProvider) New(ctx context.Context, config map[string]string) (*te
 		return nil, nil, errors.New("context cannot be nil")
 	}
 
-	// Convert map[string]string to telemetry.Config
-	telemetryConfig := &telemetry.Config{
+	// Convert map[string]string to otelsetup.Config
+	telemetryConfig := &otelsetup.Config{
 		ServiceName:    config["serviceName"],
 		ServiceVersion: config["serviceVersion"],
 		Environment:    config["environment"],
@@ -44,13 +44,13 @@ func (m metricsProvider) New(ctx context.Context, config map[string]string) (*te
 
 	// Apply defaults if fields are empty
 	if telemetryConfig.ServiceName == "" {
-		telemetryConfig.ServiceName = telemetry.DefaultConfig().ServiceName
+		telemetryConfig.ServiceName = otelsetup.DefaultConfig().ServiceName
 	}
 	if telemetryConfig.ServiceVersion == "" {
-		telemetryConfig.ServiceVersion = telemetry.DefaultConfig().ServiceVersion
+		telemetryConfig.ServiceVersion = otelsetup.DefaultConfig().ServiceVersion
 	}
 	if telemetryConfig.Environment == "" {
-		telemetryConfig.Environment = telemetry.DefaultConfig().Environment
+		telemetryConfig.Environment = otelsetup.DefaultConfig().Environment
 	}
 
 	log.Debugf(ctx, "Telemetry config mapped: %+v", telemetryConfig)

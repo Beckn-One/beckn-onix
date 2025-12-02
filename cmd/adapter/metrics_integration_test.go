@@ -5,13 +5,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/beckn-one/beckn-onix/pkg/telemetry"
+	"github.com/beckn-one/beckn-onix/pkg/plugin/implementation/otelsetup"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMetricsEndpointExposesPrometheus(t *testing.T) {
 	ctx := context.Background()
-	provider, err := telemetry.NewProvider(ctx, &telemetry.Config{
+	setup := otelsetup.Setup{}
+	provider, err := setup.New(ctx, &otelsetup.Config{
 		ServiceName:    "test-onix",
 		ServiceVersion: "1.0.0",
 		EnableMetrics:  true,

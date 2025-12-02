@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/beckn-one/beckn-onix/pkg/telemetry"
+	"github.com/beckn-one/beckn-onix/pkg/plugin/implementation/otelsetup"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,8 +18,8 @@ func TestMetricsProviderNew_Success(t *testing.T) {
 		config map[string]string
 	}{
 		{
-			name:   "Valid config with all fields",
-			ctx:    context.Background(),
+			name: "Valid config with all fields",
+			ctx:  context.Background(),
 			config: map[string]string{
 				"serviceName":    "test-service",
 				"serviceVersion": "1.0.0",
@@ -33,15 +33,15 @@ func TestMetricsProviderNew_Success(t *testing.T) {
 			config: map[string]string{},
 		},
 		{
-			name:   "Valid config with enableMetrics false",
-			ctx:    context.Background(),
+			name: "Valid config with enableMetrics false",
+			ctx:  context.Background(),
 			config: map[string]string{
 				"enableMetrics": "false",
 			},
 		},
 		{
-			name:   "Valid config with partial fields",
-			ctx:    context.Background(),
+			name: "Valid config with partial fields",
+			ctx:  context.Background(),
 			config: map[string]string{
 				"serviceName":    "custom-service",
 				"serviceVersion": "2.0.0",
@@ -105,7 +105,7 @@ func TestMetricsProviderNew_ConfigConversion(t *testing.T) {
 	tests := []struct {
 		name           string
 		config         map[string]string
-		expectedConfig *telemetry.Config
+		expectedConfig *otelsetup.Config
 	}{
 		{
 			name: "All fields provided",
@@ -115,7 +115,7 @@ func TestMetricsProviderNew_ConfigConversion(t *testing.T) {
 				"enableMetrics":  "true",
 				"environment":    "production",
 			},
-			expectedConfig: &telemetry.Config{
+			expectedConfig: &otelsetup.Config{
 				ServiceName:    "my-service",
 				ServiceVersion: "3.0.0",
 				EnableMetrics:  true,
@@ -125,11 +125,11 @@ func TestMetricsProviderNew_ConfigConversion(t *testing.T) {
 		{
 			name:   "Empty config uses defaults",
 			config: map[string]string{},
-			expectedConfig: &telemetry.Config{
-				ServiceName:    telemetry.DefaultConfig().ServiceName,
-				ServiceVersion: telemetry.DefaultConfig().ServiceVersion,
+			expectedConfig: &otelsetup.Config{
+				ServiceName:    otelsetup.DefaultConfig().ServiceName,
+				ServiceVersion: otelsetup.DefaultConfig().ServiceVersion,
 				EnableMetrics:  true, // Default when not specified
-				Environment:    telemetry.DefaultConfig().Environment,
+				Environment:    otelsetup.DefaultConfig().Environment,
 			},
 		},
 		{
@@ -137,11 +137,11 @@ func TestMetricsProviderNew_ConfigConversion(t *testing.T) {
 			config: map[string]string{
 				"enableMetrics": "false",
 			},
-			expectedConfig: &telemetry.Config{
-				ServiceName:    telemetry.DefaultConfig().ServiceName,
-				ServiceVersion: telemetry.DefaultConfig().ServiceVersion,
+			expectedConfig: &otelsetup.Config{
+				ServiceName:    otelsetup.DefaultConfig().ServiceName,
+				ServiceVersion: otelsetup.DefaultConfig().ServiceVersion,
 				EnableMetrics:  false,
-				Environment:    telemetry.DefaultConfig().Environment,
+				Environment:    otelsetup.DefaultConfig().Environment,
 			},
 		},
 		{
@@ -149,11 +149,11 @@ func TestMetricsProviderNew_ConfigConversion(t *testing.T) {
 			config: map[string]string{
 				"enableMetrics": "invalid",
 			},
-			expectedConfig: &telemetry.Config{
-				ServiceName:    telemetry.DefaultConfig().ServiceName,
-				ServiceVersion: telemetry.DefaultConfig().ServiceVersion,
+			expectedConfig: &otelsetup.Config{
+				ServiceName:    otelsetup.DefaultConfig().ServiceName,
+				ServiceVersion: otelsetup.DefaultConfig().ServiceVersion,
 				EnableMetrics:  true, // Defaults to true on parse error
-				Environment:    telemetry.DefaultConfig().Environment,
+				Environment:    otelsetup.DefaultConfig().Environment,
 			},
 		},
 	}
@@ -308,4 +308,3 @@ func TestMetricsProviderNew_DefaultValues(t *testing.T) {
 		assert.NoError(t, err, "cleanup() should not return error")
 	}
 }
-

@@ -15,12 +15,7 @@ func TestGetStepMetrics_Success(t *testing.T) {
 	ctx := context.Background()
 
 	// Initialize telemetry provider first
-	provider, err := NewProvider(ctx, &Config{
-		ServiceName:    "test-service",
-		ServiceVersion: "1.0.0",
-		EnableMetrics:  true,
-		Environment:    "test",
-	})
+	provider, err := NewTestProvider(ctx)
 	require.NoError(t, err)
 	defer provider.Shutdown(context.Background())
 
@@ -39,12 +34,7 @@ func TestGetStepMetrics_ConcurrentAccess(t *testing.T) {
 	ctx := context.Background()
 
 	// Initialize telemetry provider first
-	provider, err := NewProvider(ctx, &Config{
-		ServiceName:    "test-service",
-		ServiceVersion: "1.0.0",
-		EnableMetrics:  true,
-		Environment:    "test",
-	})
+	provider, err := NewTestProvider(ctx)
 	require.NoError(t, err)
 	defer provider.Shutdown(context.Background())
 
@@ -81,12 +71,7 @@ func TestStepMetrics_Instruments(t *testing.T) {
 	ctx := context.Background()
 
 	// Initialize telemetry provider
-	provider, err := NewProvider(ctx, &Config{
-		ServiceName:    "test-service",
-		ServiceVersion: "1.0.0",
-		EnableMetrics:  true,
-		Environment:    "test",
-	})
+	provider, err := NewTestProvider(ctx)
 	require.NoError(t, err)
 	defer provider.Shutdown(context.Background())
 
@@ -128,12 +113,7 @@ func TestStepMetrics_MultipleCalls(t *testing.T) {
 	ctx := context.Background()
 
 	// Initialize telemetry provider
-	provider, err := NewProvider(ctx, &Config{
-		ServiceName:    "test-service",
-		ServiceVersion: "1.0.0",
-		EnableMetrics:  true,
-		Environment:    "test",
-	})
+	provider, err := NewTestProvider(ctx)
 	require.NoError(t, err)
 	defer provider.Shutdown(context.Background())
 

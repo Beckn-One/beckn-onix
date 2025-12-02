@@ -10,12 +10,7 @@ import (
 
 func TestNewProviderAndMetrics(t *testing.T) {
 	ctx := context.Background()
-	provider, err := NewProvider(ctx, &Config{
-		ServiceName:    "test-service",
-		ServiceVersion: "1.0.0",
-		EnableMetrics:  true,
-		Environment:    "test",
-	})
+	provider, err := NewTestProvider(ctx)
 	require.NoError(t, err)
 	require.NotNil(t, provider)
 	require.NotNil(t, provider.MetricsHandler)

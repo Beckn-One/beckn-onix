@@ -19,12 +19,7 @@ func (s stubStep) Run(ctx *model.StepContext) error {
 
 func TestInstrumentedStepSuccess(t *testing.T) {
 	ctx := context.Background()
-	provider, err := NewProvider(ctx, &Config{
-		ServiceName:    "test-service",
-		ServiceVersion: "1.0.0",
-		EnableMetrics:  true,
-		Environment:    "test",
-	})
+	provider, err := NewTestProvider(ctx)
 	require.NoError(t, err)
 	defer provider.Shutdown(context.Background())
 
@@ -40,12 +35,7 @@ func TestInstrumentedStepSuccess(t *testing.T) {
 
 func TestInstrumentedStepError(t *testing.T) {
 	ctx := context.Background()
-	provider, err := NewProvider(ctx, &Config{
-		ServiceName:    "test-service",
-		ServiceVersion: "1.0.0",
-		EnableMetrics:  true,
-		Environment:    "test",
-	})
+	provider, err := NewTestProvider(ctx)
 	require.NoError(t, err)
 	defer provider.Shutdown(context.Background())
 

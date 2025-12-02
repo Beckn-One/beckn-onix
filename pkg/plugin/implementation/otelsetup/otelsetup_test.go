@@ -6,7 +6,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/beckn-one/beckn-onix/pkg/telemetry"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -17,11 +16,11 @@ func TestSetup_New_Success(t *testing.T) {
 
 	tests := []struct {
 		name string
-		cfg  *telemetry.Config
+		cfg  *Config
 	}{
 		{
 			name: "Valid config with all fields",
-			cfg: &telemetry.Config{
+			cfg: &Config{
 				ServiceName:    "test-service",
 				ServiceVersion: "1.0.0",
 				EnableMetrics:  true,
@@ -30,7 +29,7 @@ func TestSetup_New_Success(t *testing.T) {
 		},
 		{
 			name: "Valid config with metrics disabled",
-			cfg: &telemetry.Config{
+			cfg: &Config{
 				ServiceName:    "test-service",
 				ServiceVersion: "1.0.0",
 				EnableMetrics:  false,
@@ -39,7 +38,7 @@ func TestSetup_New_Success(t *testing.T) {
 		},
 		{
 			name: "Config with empty fields uses defaults",
-			cfg: &telemetry.Config{
+			cfg: &Config{
 				ServiceName:    "",
 				ServiceVersion: "",
 				EnableMetrics:  true,
@@ -82,7 +81,7 @@ func TestSetup_New_Failure(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		cfg     *telemetry.Config
+		cfg     *Config
 		wantErr bool
 	}{
 		{
@@ -112,7 +111,7 @@ func TestSetup_New_DefaultValues(t *testing.T) {
 	ctx := context.Background()
 
 	// Test with empty fields - should use defaults
-	cfg := &telemetry.Config{
+	cfg := &Config{
 		ServiceName:    "",
 		ServiceVersion: "",
 		EnableMetrics:  true,
@@ -142,7 +141,7 @@ func TestSetup_New_MetricsDisabled(t *testing.T) {
 	setup := Setup{}
 	ctx := context.Background()
 
-	cfg := &telemetry.Config{
+	cfg := &Config{
 		ServiceName:    "test-service",
 		ServiceVersion: "1.0.0",
 		EnableMetrics:  false,
@@ -165,13 +164,13 @@ func TestSetup_New_MetricsDisabled(t *testing.T) {
 func TestToPluginConfig_Success(t *testing.T) {
 	tests := []struct {
 		name           string
-		cfg            *telemetry.Config
+		cfg            *Config
 		expectedID     string
 		expectedConfig map[string]string
 	}{
 		{
 			name: "Valid config with all fields",
-			cfg: &telemetry.Config{
+			cfg: &Config{
 				ServiceName:    "test-service",
 				ServiceVersion: "1.0.0",
 				EnableMetrics:  true,
@@ -187,7 +186,7 @@ func TestToPluginConfig_Success(t *testing.T) {
 		},
 		{
 			name: "Config with enableMetrics false",
-			cfg: &telemetry.Config{
+			cfg: &Config{
 				ServiceName:    "my-service",
 				ServiceVersion: "2.0.0",
 				EnableMetrics:  false,
@@ -203,7 +202,7 @@ func TestToPluginConfig_Success(t *testing.T) {
 		},
 		{
 			name: "Config with empty fields",
-			cfg: &telemetry.Config{
+			cfg: &Config{
 				ServiceName:    "",
 				ServiceVersion: "",
 				EnableMetrics:  true,
@@ -259,7 +258,7 @@ func TestToPluginConfig_BooleanConversion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := &telemetry.Config{
+			cfg := &Config{
 				ServiceName:    "test",
 				ServiceVersion: "1.0.0",
 				EnableMetrics:  tt.enableMetrics,
