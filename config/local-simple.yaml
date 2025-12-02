@@ -63,11 +63,11 @@ modules:
           id: router
           config:
             routingConfig: ./config/local-simple-routing.yaml
-        reqpreprocessor:
-          id: reqpreprocessor
-          config:
-            uuidKeys: transaction_id,message_id
-            role: bap
+        middleware:
+          - id: reqpreprocessor
+            config:
+              uuidKeys: transaction_id,message_id
+              role: bap
       steps:
         - validateSign
         - addRoute
@@ -109,11 +109,11 @@ modules:
             routingConfig: ./config/local-simple-routing-BAPCaller.yaml
         signer:
           id: signer
-        reqpreprocessor:
-          id: reqpreprocessor
-          config:
-            uuidKeys: transaction_id,message_id
-            role: bap
+        middleware:
+          - id: reqpreprocessor
+            config:
+              uuidKeys: transaction_id,message_id
+              role: bap
       steps:
         - addRoute
         - sign
