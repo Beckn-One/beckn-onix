@@ -114,7 +114,6 @@ func initPlugins(ctx context.Context, mgr *plugin.Manager, telemetryCfg *otelset
 // newServer creates and initializes the HTTP server.
 func newServer(ctx context.Context, mgr handler.PluginManager, cfg *Config, otelProvider *telemetry.Provider) (http.Handler, error) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/health", handler.HealthHandler)
 
 	if otelProvider != nil && otelProvider.MetricsHandler != nil {
 		mux.Handle("/metrics", otelProvider.MetricsHandler)
