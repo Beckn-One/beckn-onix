@@ -13,6 +13,7 @@ import (
 	"github.com/beckn-one/beckn-onix/pkg/plugin"
 	"github.com/beckn-one/beckn-onix/pkg/plugin/definition"
 	"github.com/beckn-one/beckn-onix/pkg/response"
+	"github.com/beckn-one/beckn-onix/pkg/telemetry"
 )
 
 // stdHandler orchestrates the execution of defined processing steps.
@@ -29,6 +30,7 @@ type stdHandler struct {
 	SubscriberID    string
 	role            model.Role
 	httpClient      *http.Client
+	moduleName      string
 }
 
 // newHTTPClient creates a new HTTP client with a custom transport configuration.
@@ -50,16 +52,18 @@ func newHTTPClient(cfg *HttpClientConfig) *http.Client {
 	if cfg.ResponseHeaderTimeout > 0 {
 		transport.ResponseHeaderTimeout = cfg.ResponseHeaderTimeout
 	}
+
 	return &http.Client{Transport: transport}
 }
 
 // NewStdHandler initializes a new processor with plugins and steps.
-func NewStdHandler(ctx context.Context, mgr PluginManager, cfg *Config) (http.Handler, error) {
+func NewStdHandler(ctx context.Context, mgr PluginManager, cfg *Config, moduleName string) (http.Handler, error) {
 	h := &stdHandler{
 		steps:        []definition.Step{},
 		SubscriberID: cfg.SubscriberID,
 		role:         cfg.Role,
 		httpClient:   newHTTPClient(&cfg.HttpClientConfig),
+		moduleName:   moduleName,
 	}
 	// Initialize plugins.
 	if err := h.initPlugins(ctx, mgr, &cfg.Plugins); err != nil {
@@ -74,6 +78,9 @@ func NewStdHandler(ctx context.Context, mgr PluginManager, cfg *Config) (http.Ha
 
 // ServeHTTP processes an incoming HTTP request and executes defined processing steps.
 func (h *stdHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	r.Header.Set("X-Module-Name", h.moduleName)
+	r.Header.Set("X-Role", string(h.role))
+
 	ctx, err := h.stepCtx(r, w.Header())
 	if err != nil {
 		log.Errorf(r.Context(), err, "stepCtx(r):%v", err)
@@ -96,6 +103,10 @@ func (h *stdHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		response.SendAck(w)
 		return
 	}
+
+	// These headers are only needed for internal instrumentation; avoid leaking them downstream.
+	r.Header.Del("X-Module-Name")
+	r.Header.Del("X-Role")
 
 	// Handle routing based on the defined route type.
 	route(ctx, r, w, h.publisher, h.httpClient)
@@ -287,7 +298,13 @@ func (h *stdHandler) initSteps(ctx context.Context, mgr PluginManager, cfg *Conf
 		if err != nil {
 			return err
 		}
+		instrumentedStep, wrapErr := telemetry.NewInstrumentedStep(s, step, h.moduleName)
+		if wrapErr != nil {
+			log.Warnf(ctx, "Failed to instrument step %s: %v", step, wrapErr)
 		h.steps = append(h.steps, s)
+			continue
+		}
+		h.steps = append(h.steps, instrumentedStep)
 	}
 	log.Infof(ctx, "Processor steps initialized: %v", cfg.Steps)
 	return nil

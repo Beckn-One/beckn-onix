@@ -69,6 +69,11 @@ func (m *mockPluginManager) KeyManager(ctx context.Context, cache definition.Cac
 	return nil, nil
 }
 
+// Registry returns a mock registry lookup implementation.
+func (m *mockPluginManager) Registry(ctx context.Context, cfg *plugin.Config) (definition.RegistryLookup, error) {
+	return nil, nil
+}
+
 // SchemaValidator returns a mock schema validator implementation.
 func (m *mockPluginManager) SchemaValidator(ctx context.Context, cfg *plugin.Config) (definition.SchemaValidator, error) {
 	return nil, nil
@@ -123,6 +128,7 @@ func TestRegisterSuccess(t *testing.T) {
 	if capturedModuleName != "test-module" {
 		t.Errorf("expected module_id in context to be 'test-module', got %v", capturedModuleName)
 	}
+
 	// Verifying /health endpoint registration
 	reqHealth := httptest.NewRequest(http.MethodGet, "/health", nil)
 	recHealth := httptest.NewRecorder()

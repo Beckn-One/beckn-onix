@@ -16,6 +16,7 @@ plugins=(
     "registry"
     "dediregistry"
     "reqpreprocessor"
+    "otelsetup"
     "router"
     "schemavalidator"
     "schemav2validator"
