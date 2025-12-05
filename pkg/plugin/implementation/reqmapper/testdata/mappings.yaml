@@ -1,0 +1,17 @@
+mappings:
+  search:
+    bapMappings: |
+      {
+        "context": $.context,
+        "message": {
+          "filters": {
+            "pickup": $.message.intent.fulfillment.start.location,
+            "drop": $.message.intent.fulfillment.end.location
+          }
+        }
+      }
+    bppMappings: |
+      {
+        "context": $.context,
+        "message": $.message
+      }

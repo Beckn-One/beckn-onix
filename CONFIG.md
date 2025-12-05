@@ -624,6 +624,109 @@ middleware:
 
 ---
 
+#### 11. Reqmapper Plugin
+
+**Purpose**: Transform Beckn payloads between protocol versions or shapes using JSONata before the request continues through the handler. Mount it inside the `middleware` list wherever translation is required.
+
+```yaml
+middleware:
+  - id: reqmapper
+    config:
+      role: bap               # Use `bpp` when running inside a BPP handler
+      mappingsFile: ./config/mappings.yaml
+```
+
+**Parameters**:
+- `role`: Required. Determines which JSONata expression is evaluated (`bapMappings` or `bppMappings`) for the current action.
+- `mappingsFile`: Required. Absolute or relative path to a YAML file that contains the JSONata expressions for every action.
+
+**Mapping file structure**:
+```yaml
+mappings:
+  <action-name>:
+    bapMappings: |
+      # JSONata expression applied when `role: bap`
+    bppMappings: |
+      # JSONata expression applied when `role: bpp`
+```
+Each action entry is optional—if no mapping exists for the current action, the original request body is passed through unchanged. JSONata expressions receive the entire Beckn request as input (`$`) and must return the full payload that should replace it.
+
+**Sample mapping file**:
+```yaml
+mappings:
+  search:
+    bapMappings: |
+      {
+        "context": {
+          "action": "discover",
+          "version": "2.0.0",
+          "domain": "beckn.one:retail",
+          "bap_id": $.context.bap_id,
+          "bap_uri": $.context.bap_uri,
+          "transaction_id": $.context.transaction_id,
+          "message_id": $.context.message_id,
+          "timestamp": $.context.timestamp
+        },
+        "message": {
+          "filters": $.message.intent.category ? {
+            "type": "jsonpath",
+            "expression": "$[?(@.category.code == '" & $.message.intent.category.descriptor.code & "')]"
+          } : null
+        }
+      }
+    bppMappings: |
+      {
+        "context": {
+          "action": "search",
+          "version": "1.1.0",
+          "domain": "retail",
+          "bap_id": $.context.bap_id,
+          "bap_uri": $.context.bap_uri,
+          "transaction_id": $.context.transaction_id,
+          "message_id": $.context.message_id,
+          "timestamp": $.context.timestamp
+        },
+        "message": {
+          "intent": {
+            "category": $.message.filters ? {
+              "descriptor": {
+                "code": $substringAfter($substringBefore($.message.filters.expression, "'"), "== '")
+              }
+            } : null
+          }
+        }
+      }
+  on_search:
+    bapMappings: |
+      {
+        "context": $.context,
+        "message": {
+          "catalog": {
+            "descriptor": $.message.catalogs[0]."beckn:descriptor" ? {
+              "name": $.message.catalogs[0]."beckn:descriptor"."schema:name"
+            } : null
+          }
+        }
+      }
+    bppMappings: |
+      {
+        "context": $.context,
+        "message": {
+          "catalogs": [{
+            "@type": "beckn:Catalog",
+            "beckn:items": $.message.catalog.providers[].items[].
+              {
+                "@type": "beckn:Item",
+                "beckn:id": id
+              }
+          }]
+        }
+      }
+```
+The sample illustrates how a single mapping file can convert `search` requests and `on_search` responses between Beckn 1.1.0 (BAP) and Beckn 2.0.0 (BPP) payload shapes. You can define as many action entries as needed, and the plugin will compile and cache the JSONata expressions on startup.
+
+---
+
 ## Routing Configuration
 
 ### Routing Rules File Structure

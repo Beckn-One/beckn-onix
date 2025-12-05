@@ -20,7 +20,7 @@ require (
 
 require github.com/zenazn/pkcs7pad v0.0.0-20170308005700-253a5b1f0e03
 
-require golang.org/x/text v0.23.0 // indirect
+require golang.org/x/text v0.26.0 // indirect
 
 require (
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
@@ -50,7 +50,7 @@ require (
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/woodsbury/decimal128 v1.3.0 // indirect
 	golang.org/x/net v0.38.0 // indirect
-	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1 // indirect
 )
 
@@ -59,6 +59,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-retryablehttp v0.7.7
 	github.com/hashicorp/vault/api v1.16.0
+	github.com/jsonata-go/jsonata v0.0.0-20250709164031-599f35f32e5f
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/redis/go-redis/v9 v9.8.0
 	github.com/rs/zerolog v1.34.0
