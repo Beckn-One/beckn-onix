@@ -129,8 +129,9 @@ The **Beckn Protocol** is an open protocol that enables location-aware, local co
 - **Encrypter**: AES encryption for sensitive data protection
 - **Decrypter**: AES decryption for encrypted data processing
 - **ReqPreprocessor**: Request preprocessing (UUID generation, headers)
-- **Registry**: Standard Beckn registry lookup for participant information
-- **DeDiRegistry**: DeDi registry to lookup public keys for NP.
+- **ReqMapper**: Middleware to transform payload either between Beckn versions or against other platforms.
+- **Registry**: Standard Beckn registry or Beckn One DeDi registry lookup for participant information
+
 ## Quick Start
 
 ### Prerequisites
