@@ -151,3 +151,45 @@ func TestHttpClientConfigPerformanceValues(t *testing.T) {
 		t.Errorf("Expected ResponseHeaderTimeout=5s, got %v", transport.ResponseHeaderTimeout)
 	}
 }
+
+func TestNewHTTPClientWithTransportWrapper(t *testing.T) {
+	wrappedTransport := &mockRoundTripper{}
+	wrapper := &mockTransportWrapper{
+		returnTransport: wrappedTransport,
+	}
+
+	client := newHTTPClient(&HttpClientConfig{}, wrapper)
+
+	if !wrapper.wrapCalled {
+		t.Fatal("expected transport wrapper to be invoked")
+	}
+
+	if wrapper.wrappedTransport == nil {
+		t.Fatal("expected base transport to be passed to wrapper")
+	}
+
+	if client.Transport != wrappedTransport {
+		t.Errorf("expected client transport to use wrapper transport")
+	}
+}
+
+type mockTransportWrapper struct {
+	wrapCalled       bool
+	wrappedTransport http.RoundTripper
+	returnTransport  http.RoundTripper
+}
+
+func (m *mockTransportWrapper) Wrap(base http.RoundTripper) http.RoundTripper {
+	m.wrapCalled = true
+	m.wrappedTransport = base
+	if m.returnTransport != nil {
+		return m.returnTransport
+	}
+	return base
+}
+
+type mockRoundTripper struct{}
+
+func (m *mockRoundTripper) RoundTrip(_ *http.Request) (*http.Response, error) {
+	return nil, nil
+}
