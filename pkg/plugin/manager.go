@@ -196,6 +196,28 @@ func (m *Manager) Middleware(ctx context.Context, cfg *Config) (func(http.Handle
 	return mwp.New(ctx, cfg.Config)
 }
 
+// TransportWrapper returns a TransportWrapper instance based on the provided configuration.
+func (m *Manager) TransportWrapper(ctx context.Context, cfg *Config) (definition.TransportWrapper, error) {
+	twp, err := provider[definition.TransportWrapperProvider](m.plugins, cfg.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load provider for %s: %w", cfg.ID, err)
+	}
+
+	config := make(map[string]any, len(cfg.Config))
+	for k, v := range cfg.Config {
+		config[k] = v
+	}
+
+	wrapper, closer, err := twp.New(ctx, config)
+	if err != nil {
+		return nil, err
+	}
+	if closer != nil {
+		m.closers = append(m.closers, closer)
+	}
+	return wrapper, nil
+}
+
 // Step returns a Step instance based on the provided configuration.
 func (m *Manager) Step(ctx context.Context, cfg *Config) (definition.Step, error) {
 	sp, err := provider[definition.StepProvider](m.plugins, cfg.ID)

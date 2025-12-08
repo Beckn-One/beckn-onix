@@ -17,22 +17,23 @@ import (
 
 // stdHandler orchestrates the execution of defined processing steps.
 type stdHandler struct {
-	signer          definition.Signer
-	steps           []definition.Step
-	signValidator   definition.SignValidator
-	cache           definition.Cache
-	registry        definition.RegistryLookup
-	km              definition.KeyManager
-	schemaValidator definition.SchemaValidator
-	router          definition.Router
-	publisher       definition.Publisher
-	SubscriberID    string
-	role            model.Role
-	httpClient      *http.Client
+	signer           definition.Signer
+	steps            []definition.Step
+	signValidator    definition.SignValidator
+	cache            definition.Cache
+	registry         definition.RegistryLookup
+	km               definition.KeyManager
+	schemaValidator  definition.SchemaValidator
+	router           definition.Router
+	publisher        definition.Publisher
+	transportWrapper definition.TransportWrapper
+	SubscriberID     string
+	role             model.Role
+	httpClient       *http.Client
 }
 
 // newHTTPClient creates a new HTTP client with a custom transport configuration.
-func newHTTPClient(cfg *HttpClientConfig) *http.Client {
+func newHTTPClient(cfg *HttpClientConfig, wrapper definition.TransportWrapper) *http.Client {
 	// Clone the default transport to inherit its sensible defaults.
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 
@@ -50,7 +51,12 @@ func newHTTPClient(cfg *HttpClientConfig) *http.Client {
 	if cfg.ResponseHeaderTimeout > 0 {
 		transport.ResponseHeaderTimeout = cfg.ResponseHeaderTimeout
 	}
-	return &http.Client{Transport: transport}
+	var finalTransport http.RoundTripper = transport
+	if wrapper != nil {
+		log.Debugf(context.Background(), "Applying custom transport wrapper")
+		finalTransport = wrapper.Wrap(transport)
+	}
+	return &http.Client{Transport: finalTransport}
 }
 
 // NewStdHandler initializes a new processor with plugins and steps.
@@ -59,12 +65,13 @@ func NewStdHandler(ctx context.Context, mgr PluginManager, cfg *Config) (http.Ha
 		steps:        []definition.Step{},
 		SubscriberID: cfg.SubscriberID,
 		role:         cfg.Role,
-		httpClient:   newHTTPClient(&cfg.HttpClientConfig),
 	}
 	// Initialize plugins.
 	if err := h.initPlugins(ctx, mgr, &cfg.Plugins); err != nil {
 		return nil, fmt.Errorf("failed to initialize plugins: %w", err)
 	}
+	// Initialize HTTP client after plugins so transport wrapper can be applied.
+	h.httpClient = newHTTPClient(&cfg.HttpClientConfig, h.transportWrapper)
 	// Initialize steps.
 	if err := h.initSteps(ctx, mgr, cfg); err != nil {
 		return nil, fmt.Errorf("failed to initialize steps: %w", err)
@@ -242,6 +249,9 @@ func (h *stdHandler) initPlugins(ctx context.Context, mgr PluginManager, cfg *Pl
 		return err
 	}
 	if h.signer, err = loadPlugin(ctx, "Signer", cfg.Signer, mgr.Signer); err != nil {
+		return err
+	}
+	if h.transportWrapper, err = loadPlugin(ctx, "TransportWrapper", cfg.TransportWrapper, mgr.TransportWrapper); err != nil {
 		return err
 	}
 
