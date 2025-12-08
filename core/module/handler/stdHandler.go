@@ -85,7 +85,7 @@ func (h *stdHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Execute processing steps.
 	for _, step := range h.steps {
 		if err := step.Run(ctx); err != nil {
-			log.Errorf(ctx, err, "%T.run(%v):%v", step, ctx, err)
+			log.Errorf(ctx, err, "%T.run():%v", step, err)
 			response.SendNack(ctx, w, err)
 			return
 		}
