@@ -22,6 +22,7 @@ type PluginManager interface {
 	Cache(ctx context.Context, cfg *plugin.Config) (definition.Cache, error)
 	Registry(ctx context.Context, cfg *plugin.Config) (definition.RegistryLookup, error)
 	KeyManager(ctx context.Context, cache definition.Cache, rLookup definition.RegistryLookup, cfg *plugin.Config) (definition.KeyManager, error)
+	TransportWrapper(ctx context.Context, cfg *plugin.Config) (definition.TransportWrapper, error)
 	SchemaValidator(ctx context.Context, cfg *plugin.Config) (definition.SchemaValidator, error)
 }
 
@@ -35,16 +36,17 @@ const (
 
 // PluginCfg holds the configuration for various plugins.
 type PluginCfg struct {
-	SchemaValidator *plugin.Config  `yaml:"schemaValidator,omitempty"`
-	SignValidator   *plugin.Config  `yaml:"signValidator,omitempty"`
-	Publisher       *plugin.Config  `yaml:"publisher,omitempty"`
-	Signer          *plugin.Config  `yaml:"signer,omitempty"`
-	Router          *plugin.Config  `yaml:"router,omitempty"`
-	Cache           *plugin.Config  `yaml:"cache,omitempty"`
-	Registry        *plugin.Config  `yaml:"registry,omitempty"`
-	KeyManager      *plugin.Config  `yaml:"keyManager,omitempty"`
-	Middleware      []plugin.Config `yaml:"middleware,omitempty"`
-	Steps           []plugin.Config
+	SchemaValidator  *plugin.Config  `yaml:"schemaValidator,omitempty"`
+	SignValidator    *plugin.Config  `yaml:"signValidator,omitempty"`
+	Publisher        *plugin.Config  `yaml:"publisher,omitempty"`
+	Signer           *plugin.Config  `yaml:"signer,omitempty"`
+	Router           *plugin.Config  `yaml:"router,omitempty"`
+	Cache            *plugin.Config  `yaml:"cache,omitempty"`
+	Registry         *plugin.Config  `yaml:"registry,omitempty"`
+	KeyManager       *plugin.Config  `yaml:"keyManager,omitempty"`
+	TransportWrapper *plugin.Config  `yaml:"transportWrapper,omitempty"`
+	Middleware       []plugin.Config `yaml:"middleware,omitempty"`
+	Steps            []plugin.Config
 }
 
 // HttpClientConfig defines the configuration for the HTTP transport layer.

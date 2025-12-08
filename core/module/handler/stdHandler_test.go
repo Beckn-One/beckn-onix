@@ -55,8 +55,8 @@ func TestNewHTTPClient(t *testing.T) {
 		{
 			name: "partial configuration",
 			config: HttpClientConfig{
-				MaxIdleConns:        500,
-				IdleConnTimeout:     180 * time.Second,
+				MaxIdleConns:    500,
+				IdleConnTimeout: 180 * time.Second,
 			},
 			expected: struct {
 				maxIdleConns          int
@@ -74,8 +74,8 @@ func TestNewHTTPClient(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client := newHTTPClient(&tt.config)
-			
+			client := newHTTPClient(&tt.config, nil)
+
 			if client == nil {
 				t.Fatal("newHTTPClient returned nil")
 			}
@@ -107,15 +107,15 @@ func TestNewHTTPClient(t *testing.T) {
 func TestHttpClientConfigDefaults(t *testing.T) {
 	// Test that zero config values don't override defaults
 	config := &HttpClientConfig{}
-	client := newHTTPClient(config)
-	
+	client := newHTTPClient(config, nil)
+
 	transport := client.Transport.(*http.Transport)
-	
+
 	// Verify defaults are preserved when config values are zero
 	if transport.MaxIdleConns == 0 {
 		t.Error("MaxIdleConns should not be zero when using defaults")
 	}
-	
+
 	// MaxIdleConnsPerHost default is 0 (unlimited), which is correct
 	if transport.MaxIdleConns != 100 {
 		t.Errorf("Expected default MaxIdleConns=100, got %d", transport.MaxIdleConns)
@@ -130,23 +130,23 @@ func TestHttpClientConfigPerformanceValues(t *testing.T) {
 		IdleConnTimeout:       300 * time.Second,
 		ResponseHeaderTimeout: 5 * time.Second,
 	}
-	
-	client := newHTTPClient(config)
+
+	client := newHTTPClient(config, nil)
 	transport := client.Transport.(*http.Transport)
-	
+
 	// Verify performance-optimized values
 	if transport.MaxIdleConns != 1000 {
 		t.Errorf("Expected MaxIdleConns=1000, got %d", transport.MaxIdleConns)
 	}
-	
+
 	if transport.MaxIdleConnsPerHost != 200 {
 		t.Errorf("Expected MaxIdleConnsPerHost=200, got %d", transport.MaxIdleConnsPerHost)
 	}
-	
+
 	if transport.IdleConnTimeout != 300*time.Second {
 		t.Errorf("Expected IdleConnTimeout=300s, got %v", transport.IdleConnTimeout)
 	}
-	
+
 	if transport.ResponseHeaderTimeout != 5*time.Second {
 		t.Errorf("Expected ResponseHeaderTimeout=5s, got %v", transport.ResponseHeaderTimeout)
 	}

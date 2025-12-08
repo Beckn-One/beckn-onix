@@ -69,6 +69,11 @@ func (m *mockPluginManager) KeyManager(ctx context.Context, cache definition.Cac
 	return nil, nil
 }
 
+// TransportWrapper returns a mock transport wrapper implementation.
+func (m *mockPluginManager) TransportWrapper(ctx context.Context, cfg *plugin.Config) (definition.TransportWrapper, error) {
+	return nil, nil
+}
+
 // SchemaValidator returns a mock schema validator implementation.
 func (m *mockPluginManager) SchemaValidator(ctx context.Context, cfg *plugin.Config) (definition.SchemaValidator, error) {
 	return nil, nil
