@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strconv"
+	"strings"
 
 	"github.com/beckn-one/beckn-onix/pkg/plugin/definition"
 	"github.com/beckn-one/beckn-onix/pkg/plugin/implementation/schemav2validator"
@@ -37,6 +38,36 @@ func (vp schemav2ValidatorProvider) New(ctx context.Context, config map[string]s
 	if ttlStr, ok := config["cacheTTL"]; ok {
 		if ttl, err := strconv.Atoi(ttlStr); err == nil && ttl > 0 {
 			cfg.CacheTTL = ttl
+		}
+	}
+
+	// NEW: Parse enableReferencedSchemas
+	if enableStr, ok := config["enableReferencedSchemas"]; ok {
+		cfg.EnableReferencedSchemas = enableStr == "true"
+	}
+
+	// NEW: Parse referencedSchemaConfig (if enabled)
+	if cfg.EnableReferencedSchemas {
+		if v, ok := config["referencedSchemaConfig.cacheTTL"]; ok {
+			if ttl, err := strconv.Atoi(v); err == nil && ttl > 0 {
+				cfg.ReferencedSchemaConfig.CacheTTL = ttl
+			}
+		}
+		if v, ok := config["referencedSchemaConfig.maxCacheSize"]; ok {
+			if size, err := strconv.Atoi(v); err == nil && size > 0 {
+				cfg.ReferencedSchemaConfig.MaxCacheSize = size
+			}
+		}
+		if v, ok := config["referencedSchemaConfig.downloadTimeout"]; ok {
+			if timeout, err := strconv.Atoi(v); err == nil && timeout > 0 {
+				cfg.ReferencedSchemaConfig.DownloadTimeout = timeout
+			}
+		}
+		if v, ok := config["referencedSchemaConfig.allowedDomains"]; ok && v != "" {
+			cfg.ReferencedSchemaConfig.AllowedDomains = strings.Split(v, ",")
+		}
+		if v, ok := config["referencedSchemaConfig.urlTransform"]; ok && v != "" {
+			cfg.ReferencedSchemaConfig.URLTransform = v
 		}
 	}
 
