@@ -27,7 +27,7 @@ type schemav2Validator struct {
 	config      *Config
 	spec        *cachedSpec
 	specMutex   sync.RWMutex
-	schemaCache *schemaCache // NEW: cache for referenced schemas
+	schemaCache *schemaCache // cache for extended schemas
 }
 
 // cachedSpec holds a cached OpenAPI spec.
@@ -43,7 +43,7 @@ type Config struct {
 	Location string // URL, file path, or directory path
 	CacheTTL int
 
-	// NEW: Extended Schema configuration
+	// Extended Schema configuration
 	EnableExtendedSchema bool
 	ExtendedSchemaConfig ExtendedSchemaConfig
 }
@@ -73,7 +73,7 @@ func New(ctx context.Context, config *Config) (*schemav2Validator, func() error,
 		config: config,
 	}
 
-	// NEW: Initialize extended schema cache if enabled
+	// Initialize extended schema cache if enabled
 	if config.EnableExtendedSchema {
 		maxSize := 100
 		if config.ExtendedSchemaConfig.MaxCacheSize > 0 {
@@ -136,13 +136,13 @@ func (v *schemav2Validator) Validate(ctx context.Context, reqURL *url.URL, data 
 		return v.formatValidationError(err)
 	}
 
-	log.Debugf(ctx, "Core schema validation passed for action: %s", action)
+	log.Debugf(ctx, "base schema validation passed for action: %s", action)
 
-	// NEW: Extended Schema validation (if enabled)
+	// Extended Schema validation (if enabled)
 	if v.config.EnableExtendedSchema && v.schemaCache != nil {
 		log.Debugf(ctx, "Starting Extended Schema validation for action: %s", action)
 		if err := v.validateExtendedSchemas(ctx, jsonData); err != nil {
-			// Extended Schema failure - return error (same behavior as core schema)
+			// Extended Schema failure -  return error.
 			log.Debugf(ctx, "Extended Schema validation failed for action %s: %v", action, err)
 			return v.formatValidationError(err)
 		}
@@ -214,8 +214,10 @@ func (v *schemav2Validator) refreshLoop(ctx context.Context) {
 	coreTicker := time.NewTicker(time.Duration(v.config.CacheTTL) * time.Second)
 	defer coreTicker.Stop()
 
-	// NEW: Ticker for extended schema cleanup
+	// Ticker for extended schema cleanup
 	var refTicker *time.Ticker
+	var refTickerCh <-chan time.Time // Default nil, blocks forever
+
 	if v.config.EnableExtendedSchema {
 		ttl := v.config.ExtendedSchemaConfig.CacheTTL
 		if ttl <= 0 {
@@ -223,29 +225,21 @@ func (v *schemav2Validator) refreshLoop(ctx context.Context) {
 		}
 		refTicker = time.NewTicker(time.Duration(ttl) * time.Second)
 		defer refTicker.Stop()
+		refTickerCh = refTicker.C
 	}
 
 	for {
-		if refTicker != nil {
-			select {
-			case <-ctx.Done():
-				return
-			case <-coreTicker.C:
-				v.reloadExpiredSpec(ctx)
-			case <-refTicker.C:
-				if v.schemaCache != nil {
-					count := v.schemaCache.cleanupExpired()
-					if count > 0 {
-						log.Debugf(ctx, "Cleaned up %d expired extended schemas", count)
-					}
+		select {
+		case <-ctx.Done():
+			return
+		case <-coreTicker.C:
+			v.reloadExpiredSpec(ctx)
+		case <-refTickerCh:
+			if v.schemaCache != nil {
+				count := v.schemaCache.cleanupExpired()
+				if count > 0 {
+					log.Debugf(ctx, "Cleaned up %d expired extended schemas", count)
 				}
-			}
-		} else {
-			select {
-			case <-ctx.Done():
-				return
-			case <-coreTicker.C:
-				v.reloadExpiredSpec(ctx)
 			}
 		}
 	}

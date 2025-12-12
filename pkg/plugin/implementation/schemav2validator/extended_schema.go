@@ -48,7 +48,7 @@ type cachedDomainSchema struct {
 
 // validateExtendedSchemas validates all objects with @context against their schemas.
 func (v *schemav2Validator) validateExtendedSchemas(ctx context.Context, body interface{}) error {
-	// Extract "message" object - only scan inside message, not root
+	// Extract "message" object - only scan inside message
 	bodyMap, ok := body.(map[string]interface{})
 	if !ok {
 		return fmt.Errorf("body is not a valid JSON object")
@@ -291,28 +291,30 @@ func findReferencedObjects(data interface{}, path string) []referencedObject {
 
 // transformContextToSchemaURL transforms @context URL to schema URL.
 func transformContextToSchemaURL(contextURL string) string {
-	// Hardcoded transformation: context.jsonld -> attributes.yaml
+	// transformation: context.jsonld -> attributes.yaml
 	return strings.Replace(contextURL, "context.jsonld", "attributes.yaml", 1)
 }
 
 // findSchemaByType finds a schema in the document by @type value.
-func findSchemaByType(doc *openapi3.T, typeName string) (*openapi3.SchemaRef, error) {
+func findSchemaByType(ctx context.Context, doc *openapi3.T, typeName string) (*openapi3.SchemaRef, error) {
 	if doc.Components == nil || doc.Components.Schemas == nil {
 		return nil, fmt.Errorf("no schemas found in document")
 	}
 
 	// Try direct match by schema name
 	if schema, exists := doc.Components.Schemas[typeName]; exists {
+		log.Debugf(ctx, "Found schema by direct match: %s", typeName)
 		return schema, nil
 	}
 
 	// Fallback: Try x-jsonld.@type match
-	for _, schema := range doc.Components.Schemas {
+	for name, schema := range doc.Components.Schemas {
 		if schema.Value == nil {
 			continue
 		}
 		if xJsonld, ok := schema.Value.Extensions["x-jsonld"].(map[string]interface{}); ok {
 			if atType, ok := xJsonld["@type"].(string); ok && atType == typeName {
+				log.Debugf(ctx, "Found schema by x-jsonld.@type match: %s (mapped to %s)", typeName, name)
 				return schema, nil
 			}
 		}
@@ -358,7 +360,7 @@ func (c *schemaCache) validateReferencedObject(
 	}
 
 	// Find schema by @type
-	schema, err := findSchemaByType(doc, obj.Type)
+	schema, err := findSchemaByType(ctx, doc, obj.Type)
 	if err != nil {
 		log.Errorf(ctx, err, "Schema not found for @type: %s at path: %s", obj.Type, obj.Path)
 		return fmt.Errorf("at %s: %w", obj.Path, err)
