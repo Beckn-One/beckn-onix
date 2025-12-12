@@ -86,20 +86,17 @@ func (v *schemav2Validator) validateExtendedSchemas(ctx context.Context, body in
 	log.Debugf(ctx, "Extended Schema config: ttl=%v, timeout=%v, allowedDomains=%v",
 		ttl, timeout, allowedDomains)
 
-	// Validate each object and collect errors
-	var errors []string
+	// Validate each object
 	for _, obj := range objects {
 		log.Debugf(ctx, "Validating object at path: %s, @context: %s, @type: %s",
 			obj.Path, obj.Context, obj.Type)
 
 		if err := v.schemaCache.validateReferencedObject(ctx, obj, ttl, timeout, allowedDomains); err != nil {
-			errors = append(errors, err.Error())
+			return err
 		}
 	}
 
-	if len(errors) > 0 {
-		return fmt.Errorf("validation errors:\n  - %s", strings.Join(errors, "\n  - "))
-	}
+	return nil
 
 	return nil
 }
