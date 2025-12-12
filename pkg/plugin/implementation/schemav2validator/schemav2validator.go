@@ -56,7 +56,6 @@ type ReferencedSchemaConfig struct {
 	MaxCacheSize    int      // default 100
 	DownloadTimeout int      // seconds, default 30
 	AllowedDomains  []string // whitelist (empty = all allowed)
-	URLTransform    string   // e.g. "context.jsonld->attributes.yaml"
 }
 
 // referencedObject represents ANY object with @context in the request.
@@ -169,17 +168,17 @@ func (v *schemav2Validator) Validate(ctx context.Context, reqURL *url.URL, data 
 		return v.formatValidationError(err)
 	}
 
-	log.Debugf(ctx, "LEVEL 1 validation passed for action: %s", action)
+	log.Debugf(ctx, "Core schema validation passed for action: %s", action)
 
-	// NEW: LEVEL 2 - Referenced schema validation (if enabled)
+	// NEW: Extended Schema validation (if enabled)
 	if v.config.EnableReferencedSchemas && v.schemaCache != nil {
-		log.Debugf(ctx, "Starting LEVEL 2 validation for action: %s", action)
+		log.Debugf(ctx, "Starting Extended Schema validation for action: %s", action)
 		if err := v.validateReferencedSchemas(ctx, jsonData); err != nil {
-			// Level 2 failure - return error (same behavior as Level 1)
-			log.Debugf(ctx, "LEVEL 2 validation failed for action %s: %v", action, err)
+			// Extended Schema failure - return error (same behavior as core schema)
+			log.Debugf(ctx, "Extended Schema validation failed for action %s: %v", action, err)
 			return v.formatValidationError(err)
 		}
-		log.Debugf(ctx, "LEVEL 2 validation passed for action: %s", action)
+		log.Debugf(ctx, "Extended Schema validation passed for action: %s", action)
 	}
 
 	return nil
@@ -416,22 +415,18 @@ func (v *schemav2Validator) validateReferencedSchemas(ctx context.Context, body 
 	objects := findReferencedObjects(message, "message")
 
 	if len(objects) == 0 {
-		log.Debugf(ctx, "No objects with @context found in message, skipping LEVEL 2 validation")
+		log.Debugf(ctx, "No objects with @context found in message, skipping Extended Schema validation")
 		return nil
 	}
 
-	log.Debugf(ctx, "Found %d objects with @context for LEVEL 2 validation", len(objects))
+	log.Debugf(ctx, "Found %d objects with @context for Extended Schema validation", len(objects))
 
 	// Get config with defaults
-	urlTransform := "context.jsonld->attributes.yaml"
 	ttl := 86400 * time.Second // 24 hours default
 	timeout := 30 * time.Second
 	var allowedDomains []string
 
 	refConfig := v.config.ReferencedSchemaConfig
-	if refConfig.URLTransform != "" {
-		urlTransform = refConfig.URLTransform
-	}
 	if refConfig.CacheTTL > 0 {
 		ttl = time.Duration(refConfig.CacheTTL) * time.Second
 	}
@@ -440,8 +435,8 @@ func (v *schemav2Validator) validateReferencedSchemas(ctx context.Context, body 
 	}
 	allowedDomains = refConfig.AllowedDomains
 
-	log.Debugf(ctx, "LEVEL 2 config: urlTransform=%s, ttl=%v, timeout=%v, allowedDomains=%v",
-		urlTransform, ttl, timeout, allowedDomains)
+	log.Debugf(ctx, "Extended Schema config: ttl=%v, timeout=%v, allowedDomains=%v",
+		ttl, timeout, allowedDomains)
 
 	// Validate each object and collect errors
 	var errors []string
@@ -449,7 +444,7 @@ func (v *schemav2Validator) validateReferencedSchemas(ctx context.Context, body 
 		log.Debugf(ctx, "Validating object at path: %s, @context: %s, @type: %s",
 			obj.Path, obj.Context, obj.Type)
 
-		if err := v.schemaCache.validateReferencedObject(ctx, obj, urlTransform, ttl, timeout, allowedDomains); err != nil {
+		if err := v.schemaCache.validateReferencedObject(ctx, obj, ttl, timeout, allowedDomains); err != nil {
 			errors = append(errors, err.Error())
 		}
 	}
@@ -699,14 +694,12 @@ func findReferencedObjects(data interface{}, path string) []referencedObject {
 }
 
 // transformContextToSchemaURL transforms @context URL to schema URL.
-func transformContextToSchemaURL(contextURL, transform string) string {
-	parts := strings.Split(transform, "->")
-	if len(parts) != 2 {
-		// Default transformation
-		return strings.Replace(contextURL, "context.jsonld", "attributes.yaml", 1)
-	}
-	return strings.Replace(contextURL, strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]), 1)
+func transformContextToSchemaURL(contextURL string) string {
+	// Hardcoded transformation: context.jsonld -> attributes.yaml
+	return strings.Replace(contextURL, "context.jsonld", "attributes.yaml", 1)
 }
+
+
 
 // findSchemaByType finds a schema in the document by @type value.
 func findSchemaByType(doc *openapi3.T, typeName string) (*openapi3.SchemaRef, error) {
@@ -751,7 +744,6 @@ func isAllowedDomain(schemaURL string, allowedDomains []string) bool {
 func (c *schemaCache) validateReferencedObject(
 	ctx context.Context,
 	obj referencedObject,
-	urlTransform string,
 	ttl, timeout time.Duration,
 	allowedDomains []string,
 ) error {
@@ -762,7 +754,7 @@ func (c *schemaCache) validateReferencedObject(
 	}
 
 	// Transform @context to schema path (URL or file)
-	schemaPath := transformContextToSchemaURL(obj.Context, urlTransform)
+	schemaPath := transformContextToSchemaURL(obj.Context)
 	log.Debugf(ctx, "Transformed %s -> %s", obj.Context, schemaPath)
 
 	// Load schema with timeout (supports URL or local file)
@@ -778,7 +770,7 @@ func (c *schemaCache) validateReferencedObject(
 		return fmt.Errorf("at %s: %w", obj.Path, err)
 	}
 
-	// Validate object against schema (same options as Level 1)
+	// Validate object against schema (same options as core schema)
 	opts := []openapi3.SchemaValidationOption{
 		openapi3.VisitAsRequest(),
 		openapi3.EnableFormatValidation(),
