@@ -43,28 +43,28 @@ func (vp schemav2ValidatorProvider) New(ctx context.Context, config map[string]s
 
 	// NEW: Parse extendedSchema_enabled
 	if enableStr, ok := config["extendedSchema_enabled"]; ok {
-		cfg.EnableReferencedSchemas = enableStr == "true"
+		cfg.EnableExtendedSchema = enableStr == "true"
 	}
 
 	// NEW: Parse Extended Schema config (if enabled)
-	if cfg.EnableReferencedSchemas {
+	if cfg.EnableExtendedSchema {
 		if v, ok := config["extendedSchema_cacheTTL"]; ok {
 			if ttl, err := strconv.Atoi(v); err == nil && ttl > 0 {
-				cfg.ReferencedSchemaConfig.CacheTTL = ttl
+				cfg.ExtendedSchemaConfig.CacheTTL = ttl
 			}
 		}
 		if v, ok := config["extendedSchema_maxCacheSize"]; ok {
 			if size, err := strconv.Atoi(v); err == nil && size > 0 {
-				cfg.ReferencedSchemaConfig.MaxCacheSize = size
+				cfg.ExtendedSchemaConfig.MaxCacheSize = size
 			}
 		}
 		if v, ok := config["extendedSchema_downloadTimeout"]; ok {
 			if timeout, err := strconv.Atoi(v); err == nil && timeout > 0 {
-				cfg.ReferencedSchemaConfig.DownloadTimeout = timeout
+				cfg.ExtendedSchemaConfig.DownloadTimeout = timeout
 			}
 		}
 		if v, ok := config["extendedSchema_allowedDomains"]; ok && v != "" {
-			cfg.ReferencedSchemaConfig.AllowedDomains = strings.Split(v, ",")
+			cfg.ExtendedSchemaConfig.AllowedDomains = strings.Split(v, ",")
 		}
 
 	}
