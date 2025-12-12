@@ -48,7 +48,7 @@ type cachedDomainSchema struct {
 
 // validateExtendedSchemas validates all objects with @context against their schemas.
 func (v *schemav2Validator) validateExtendedSchemas(ctx context.Context, body interface{}) error {
-	// Extract "message" object - only scan inside message
+	// Extract "message" object - scan inside message
 	bodyMap, ok := body.(map[string]interface{})
 	if !ok {
 		return fmt.Errorf("body is not a valid JSON object")
@@ -95,8 +95,6 @@ func (v *schemav2Validator) validateExtendedSchemas(ctx context.Context, body in
 			return err
 		}
 	}
-
-	return nil
 
 	return nil
 }
