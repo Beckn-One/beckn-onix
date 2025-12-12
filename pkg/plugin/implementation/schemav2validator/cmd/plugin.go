@@ -41,34 +41,32 @@ func (vp schemav2ValidatorProvider) New(ctx context.Context, config map[string]s
 		}
 	}
 
-	// NEW: Parse enableReferencedSchemas
-	if enableStr, ok := config["enableReferencedSchemas"]; ok {
+	// NEW: Parse extendedSchema_enabled
+	if enableStr, ok := config["extendedSchema_enabled"]; ok {
 		cfg.EnableReferencedSchemas = enableStr == "true"
 	}
 
-	// NEW: Parse referencedSchemaConfig (if enabled)
+	// NEW: Parse Extended Schema config (if enabled)
 	if cfg.EnableReferencedSchemas {
-		if v, ok := config["referencedSchemaConfig.cacheTTL"]; ok {
+		if v, ok := config["extendedSchema_cacheTTL"]; ok {
 			if ttl, err := strconv.Atoi(v); err == nil && ttl > 0 {
 				cfg.ReferencedSchemaConfig.CacheTTL = ttl
 			}
 		}
-		if v, ok := config["referencedSchemaConfig.maxCacheSize"]; ok {
+		if v, ok := config["extendedSchema_maxCacheSize"]; ok {
 			if size, err := strconv.Atoi(v); err == nil && size > 0 {
 				cfg.ReferencedSchemaConfig.MaxCacheSize = size
 			}
 		}
-		if v, ok := config["referencedSchemaConfig.downloadTimeout"]; ok {
+		if v, ok := config["extendedSchema_downloadTimeout"]; ok {
 			if timeout, err := strconv.Atoi(v); err == nil && timeout > 0 {
 				cfg.ReferencedSchemaConfig.DownloadTimeout = timeout
 			}
 		}
-		if v, ok := config["referencedSchemaConfig.allowedDomains"]; ok && v != "" {
+		if v, ok := config["extendedSchema_allowedDomains"]; ok && v != "" {
 			cfg.ReferencedSchemaConfig.AllowedDomains = strings.Split(v, ",")
 		}
-		if v, ok := config["referencedSchemaConfig.urlTransform"]; ok && v != "" {
-			cfg.ReferencedSchemaConfig.URLTransform = v
-		}
+
 	}
 
 	return schemav2validator.New(ctx, cfg)
