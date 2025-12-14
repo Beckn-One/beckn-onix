@@ -48,8 +48,6 @@ type Config struct {
 	ExtendedSchemaConfig ExtendedSchemaConfig
 }
 
-
-
 // New creates a new Schemav2Validator instance.
 func New(ctx context.Context, config *Config) (*schemav2Validator, func() error, error) {
 	if config == nil {
@@ -142,9 +140,9 @@ func (v *schemav2Validator) Validate(ctx context.Context, reqURL *url.URL, data 
 	if v.config.EnableExtendedSchema && v.schemaCache != nil {
 		log.Debugf(ctx, "Starting Extended Schema validation for action: %s", action)
 		if err := v.validateExtendedSchemas(ctx, jsonData); err != nil {
-			// Extended Schema failure -  return error.
+			// Extended Schema failure - return error
 			log.Debugf(ctx, "Extended Schema validation failed for action %s: %v", action, err)
-			return v.formatValidationError(err)
+			return err
 		}
 		log.Debugf(ctx, "Extended Schema validation passed for action: %s", action)
 	}
@@ -411,5 +409,3 @@ func (v *schemav2Validator) getActionValue(contextSchema *openapi3.Schema) strin
 
 	return ""
 }
-
-

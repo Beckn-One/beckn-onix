@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/beckn-one/beckn-onix/pkg/log"
+	"github.com/beckn-one/beckn-onix/pkg/model"
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
@@ -97,7 +98,20 @@ func (v *schemav2Validator) validateExtendedSchemas(ctx context.Context, body in
 			obj.Path, obj.Context, obj.Type)
 
 		if err := v.schemaCache.validateReferencedObject(ctx, obj, ttl, timeout, allowedDomains); err != nil {
-			return err
+			// Extract and prefix error paths
+			var schemaErrors []model.Error
+			v.extractSchemaErrors(err, &schemaErrors)
+
+			// Prefix all paths with object path
+			for i := range schemaErrors {
+				if schemaErrors[i].Paths != "" {
+					schemaErrors[i].Paths = obj.Path + "." + schemaErrors[i].Paths
+				} else {
+					schemaErrors[i].Paths = obj.Path
+				}
+			}
+
+			return &model.SchemaValidationErr{Errors: schemaErrors}
 		}
 	}
 
@@ -384,7 +398,7 @@ func (c *schemaCache) validateReferencedObject(
 	}
 	if err := schema.Value.VisitJSON(domainData, opts...); err != nil {
 		log.Debugf(ctx, "Validation failed for @type: %s at path: %s: %v", obj.Type, obj.Path, err)
-		return fmt.Errorf("at %s: %w", obj.Path, err)
+		return err
 	}
 
 	log.Debugf(ctx, "Validation passed for @type: %s at path: %s", obj.Type, obj.Path)
