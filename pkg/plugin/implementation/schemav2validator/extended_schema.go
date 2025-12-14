@@ -22,7 +22,7 @@ type ExtendedSchemaConfig struct {
 	AllowedDomains  []string // whitelist (empty = all allowed)
 }
 
-// referencedObject represents ANY object with @context in the request.
+// referencedObject represents a domain-specific object with @context.
 type referencedObject struct {
 	Path    string
 	Context string
@@ -46,6 +46,11 @@ type cachedDomainSchema struct {
 	accessCount  int64
 }
 
+// isCoreSchema checks if @context URL is a core Beckn schema.
+func isCoreSchema(contextURL string) bool {
+	return strings.Contains(contextURL, "/schema/core/")
+}
+
 // validateExtendedSchemas validates all objects with @context against their schemas.
 func (v *schemav2Validator) validateExtendedSchemas(ctx context.Context, body interface{}) error {
 	// Extract "message" object - scan inside message
@@ -59,15 +64,15 @@ func (v *schemav2Validator) validateExtendedSchemas(ctx context.Context, body in
 		return fmt.Errorf("missing 'message' field in request body")
 	}
 
-	// Find all objects with @context starting from message
+	// Find domain-specific objects with @context (skip core schemas)
 	objects := findReferencedObjects(message, "message")
 
 	if len(objects) == 0 {
-		log.Debugf(ctx, "No objects with @context found in message, skipping Extended Schema validation")
+		log.Debugf(ctx, "No domain-specific objects with @context found, skipping Extended Schema validation")
 		return nil
 	}
 
-	log.Debugf(ctx, "Found %d objects with @context for Extended Schema validation", len(objects))
+	log.Debugf(ctx, "Found %d domain-specific objects with @context for Extended Schema validation", len(objects))
 
 	// Get config with defaults
 	ttl := 86400 * time.Second // 24 hours default
@@ -246,7 +251,7 @@ func (c *schemaCache) loadSchemaFromPath(ctx context.Context, schemaPath string,
 	return doc, nil
 }
 
-// findReferencedObjects recursively finds ALL objects with @context in the data.
+// findReferencedObjects recursively finds domain-specific objects with @context .
 func findReferencedObjects(data interface{}, path string) []referencedObject {
 	var results []referencedObject
 
@@ -255,12 +260,15 @@ func findReferencedObjects(data interface{}, path string) []referencedObject {
 		// Check for @context and @type
 		if contextVal, hasContext := v["@context"].(string); hasContext {
 			if typeVal, hasType := v["@type"].(string); hasType {
-				results = append(results, referencedObject{
-					Path:    path,
-					Context: contextVal,
-					Type:    typeVal,
-					Data:    v,
-				})
+				// Skip core schemas during traversal
+				if !isCoreSchema(contextVal) {
+					results = append(results, referencedObject{
+						Path:    path,
+						Context: contextVal,
+						Type:    typeVal,
+						Data:    v,
+					})
+				}
 			}
 		}
 
@@ -361,12 +369,20 @@ func (c *schemaCache) validateReferencedObject(
 		return fmt.Errorf("at %s: %w", obj.Path, err)
 	}
 
-	// Validate object against schema (same options as core schema)
+	// Strip JSON-LD metadata before validation
+	domainData := make(map[string]interface{}, len(obj.Data)-2)
+	for k, v := range obj.Data {
+		if k != "@context" && k != "@type" {
+			domainData[k] = v
+		}
+	}
+
+	// Validate domain-specific data against schema
 	opts := []openapi3.SchemaValidationOption{
 		openapi3.VisitAsRequest(),
 		openapi3.EnableFormatValidation(),
 	}
-	if err := schema.Value.VisitJSON(obj.Data, opts...); err != nil {
+	if err := schema.Value.VisitJSON(domainData, opts...); err != nil {
 		log.Debugf(ctx, "Validation failed for @type: %s at path: %s: %v", obj.Type, obj.Path, err)
 		return fmt.Errorf("at %s: %w", obj.Path, err)
 	}
