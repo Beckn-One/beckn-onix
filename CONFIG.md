@@ -508,7 +508,7 @@ schemaValidator:
 
 #### 5. Schema2Validator Plugin
 
-**Purpose**: Validate requests against OpenAPI 3.x specifications with action-based matching.
+**Purpose**: Validate requests against OpenAPI 3.x specifications. Supports core protocol validation and optional extended validation for domain-specific objects with `@context` references.
 
 ```yaml
 schemaValidator:
@@ -517,6 +517,11 @@ schemaValidator:
     type: url
     location: https://raw.githubusercontent.com/beckn/protocol-specifications-new/refs/heads/draft/api-specs/beckn-protocol-api.yaml
     cacheTTL: "3600"
+    extendedSchema_enabled: "true"
+    extendedSchema_cacheTTL: "86400"
+    extendedSchema_maxCacheSize: "100"
+    extendedSchema_downloadTimeout: "30"
+    extendedSchema_allowedDomains: "beckn.org,example.com"
 ```
 
 **Or for local files:**
@@ -528,12 +533,18 @@ schemaValidator:
     type: file
     location: ./validation-scripts/l2-config/mobility_1.1.0_openapi_3.1.yaml
     cacheTTL: "3600"
+    extendedSchema_enabled: "false"
 ```
 
 **Parameters**:
 - `type`: Source type - `"url"` for remote specs, `"file"` for local files
 - `location`: URL or file path to OpenAPI 3.1 specification
 - `cacheTTL`: Cache TTL in seconds before reloading spec (default: `"3600"`)
+- `extendedSchema_enabled`: Enable extended schema validation for `@context` objects (default: `"false"`)
+- `extendedSchema_cacheTTL`: Domain schema cache TTL in seconds (default: `"86400"`)
+- `extendedSchema_maxCacheSize`: Max cached schemas (default: `"100"`)
+- `extendedSchema_downloadTimeout`: Schema download timeout in seconds (default: `"30"`)
+- `extendedSchema_allowedDomains`: Comma-separated domain whitelist (empty = all allowed)
 
 ---
 
