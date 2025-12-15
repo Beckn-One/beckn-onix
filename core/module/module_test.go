@@ -59,13 +59,18 @@ func (m *mockPluginManager) Cache(ctx context.Context, cfg *plugin.Config) (defi
 	return nil, nil
 }
 
+// Registry returns a mock registry lookup implementation.
+func (m *mockPluginManager) Registry(ctx context.Context, cfg *plugin.Config) (definition.RegistryLookup, error) {
+	return nil, nil
+}
+
 // KeyManager returns a mock key manager implementation.
 func (m *mockPluginManager) KeyManager(ctx context.Context, cache definition.Cache, rLookup definition.RegistryLookup, cfg *plugin.Config) (definition.KeyManager, error) {
 	return nil, nil
 }
 
-// Registry returns a mock registry lookup implementation.
-func (m *mockPluginManager) Registry(ctx context.Context, cfg *plugin.Config) (definition.RegistryLookup, error) {
+// TransportWrapper returns a mock transport wrapper implementation.
+func (m *mockPluginManager) TransportWrapper(ctx context.Context, cfg *plugin.Config) (definition.TransportWrapper, error) {
 	return nil, nil
 }
 

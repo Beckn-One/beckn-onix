@@ -19,7 +19,7 @@ require (
 
 require github.com/zenazn/pkcs7pad v0.0.0-20170308005700-253a5b1f0e03
 
-require golang.org/x/text v0.23.0 // indirect
+require golang.org/x/text v0.26.0 // indirect
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -58,7 +58,7 @@ require (
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/otel/trace v1.38.0 // indirect
 	golang.org/x/net v0.38.0 // indirect
-	golang.org/x/sys v0.35.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1 // indirect
 	google.golang.org/protobuf v1.32.0 // indirect
 )
@@ -68,6 +68,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-retryablehttp v0.7.7
 	github.com/hashicorp/vault/api v1.16.0
+	github.com/jsonata-go/jsonata v0.0.0-20250709164031-599f35f32e5f
 	github.com/prometheus/client_golang v1.18.0
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/redis/go-redis/extra/redisotel/v9 v9.16.0

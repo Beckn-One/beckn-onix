@@ -18,23 +18,24 @@ import (
 
 // stdHandler orchestrates the execution of defined processing steps.
 type stdHandler struct {
-	signer          definition.Signer
-	steps           []definition.Step
-	signValidator   definition.SignValidator
-	cache           definition.Cache
-	registry        definition.RegistryLookup
-	km              definition.KeyManager
-	schemaValidator definition.SchemaValidator
-	router          definition.Router
-	publisher       definition.Publisher
-	SubscriberID    string
-	role            model.Role
-	httpClient      *http.Client
-	moduleName      string
+	signer           definition.Signer
+	steps            []definition.Step
+	signValidator    definition.SignValidator
+	cache            definition.Cache
+	registry         definition.RegistryLookup
+	km               definition.KeyManager
+	schemaValidator  definition.SchemaValidator
+	router           definition.Router
+	publisher        definition.Publisher
+	transportWrapper definition.TransportWrapper
+	SubscriberID     string
+	role             model.Role
+	httpClient       *http.Client
+	moduleName       string
 }
 
 // newHTTPClient creates a new HTTP client with a custom transport configuration.
-func newHTTPClient(cfg *HttpClientConfig) *http.Client {
+func newHTTPClient(cfg *HttpClientConfig, wrapper definition.TransportWrapper) *http.Client {
 	// Clone the default transport to inherit its sensible defaults.
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 
@@ -53,7 +54,12 @@ func newHTTPClient(cfg *HttpClientConfig) *http.Client {
 		transport.ResponseHeaderTimeout = cfg.ResponseHeaderTimeout
 	}
 
-	return &http.Client{Transport: transport}
+	var finalTransport http.RoundTripper = transport
+	if wrapper != nil {
+		log.Debugf(context.Background(), "Applying custom transport wrapper")
+		finalTransport = wrapper.Wrap(transport)
+	}
+	return &http.Client{Transport: finalTransport}
 }
 
 // NewStdHandler initializes a new processor with plugins and steps.
@@ -62,13 +68,14 @@ func NewStdHandler(ctx context.Context, mgr PluginManager, cfg *Config, moduleNa
 		steps:        []definition.Step{},
 		SubscriberID: cfg.SubscriberID,
 		role:         cfg.Role,
-		httpClient:   newHTTPClient(&cfg.HttpClientConfig),
 		moduleName:   moduleName,
 	}
 	// Initialize plugins.
 	if err := h.initPlugins(ctx, mgr, &cfg.Plugins); err != nil {
 		return nil, fmt.Errorf("failed to initialize plugins: %w", err)
 	}
+	// Initialize HTTP client after plugins so transport wrapper can be applied.
+	h.httpClient = newHTTPClient(&cfg.HttpClientConfig, h.transportWrapper)
 	// Initialize steps.
 	if err := h.initSteps(ctx, mgr, cfg); err != nil {
 		return nil, fmt.Errorf("failed to initialize steps: %w", err)
@@ -81,6 +88,13 @@ func (h *stdHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r.Header.Set("X-Module-Name", h.moduleName)
 	r.Header.Set("X-Role", string(h.role))
 
+	// These headers are only needed for internal instrumentation; avoid leaking them downstream.
+	// Use defer to ensure cleanup regardless of return path.
+	defer func() {
+		r.Header.Del("X-Module-Name")
+		r.Header.Del("X-Role")
+	}()
+
 	ctx, err := h.stepCtx(r, w.Header())
 	if err != nil {
 		log.Errorf(r.Context(), err, "stepCtx(r):%v", err)
@@ -92,7 +106,7 @@ func (h *stdHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Execute processing steps.
 	for _, step := range h.steps {
 		if err := step.Run(ctx); err != nil {
-			log.Errorf(ctx, err, "%T.run(%v):%v", step, ctx, err)
+			log.Errorf(ctx, err, "%T.run():%v", step, err)
 			response.SendNack(ctx, w, err)
 			return
 		}
@@ -103,10 +117,6 @@ func (h *stdHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		response.SendAck(w)
 		return
 	}
-
-	// These headers are only needed for internal instrumentation; avoid leaking them downstream.
-	r.Header.Del("X-Module-Name")
-	r.Header.Del("X-Role")
 
 	// Handle routing based on the defined route type.
 	route(ctx, r, w, h.publisher, h.httpClient)
@@ -255,6 +265,9 @@ func (h *stdHandler) initPlugins(ctx context.Context, mgr PluginManager, cfg *Pl
 	if h.signer, err = loadPlugin(ctx, "Signer", cfg.Signer, mgr.Signer); err != nil {
 		return err
 	}
+	if h.transportWrapper, err = loadPlugin(ctx, "TransportWrapper", cfg.TransportWrapper, mgr.TransportWrapper); err != nil {
+		return err
+	}
 
 	log.Debugf(ctx, "All required plugins successfully loaded for stdHandler")
 	return nil
@@ -301,7 +314,7 @@ func (h *stdHandler) initSteps(ctx context.Context, mgr PluginManager, cfg *Conf
 		instrumentedStep, wrapErr := telemetry.NewInstrumentedStep(s, step, h.moduleName)
 		if wrapErr != nil {
 			log.Warnf(ctx, "Failed to instrument step %s: %v", step, wrapErr)
-		h.steps = append(h.steps, s)
+			h.steps = append(h.steps, s)
 			continue
 		}
 		h.steps = append(h.steps, instrumentedStep)

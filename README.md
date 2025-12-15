@@ -69,14 +69,17 @@ The **Beckn Protocol** is an open protocol that enables location-aware, local co
   - Per-step histograms with error attribution
   - Cache, routing, plugin, and business KPIs (signature/schema validations, Beckn messages)
   - Native Prometheus exporter with Grafana dashboards & alert rules (`monitoring/`)
-  - Opt-in: add a `telemetry` block in your config to wire the `otelsetup` plugin; omit it to run without metrics. Example:
+  - Opt-in: add a `plugins.otelsetup` block in your config to wire the `otelsetup` plugin; omit it to run without metrics. Example:
 
     ```yaml
-    telemetry:
-      enableMetrics: true
-      serviceName: "beckn-onix"
-      serviceVersion: "1.0.0"
-      environment: "development"
+    plugins:
+      otelsetup:
+        id: otelsetup
+        config:
+          serviceName: "beckn-onix"
+          serviceVersion: "1.0.0"
+          enableMetrics: "true"
+          environment: "development"
     ```
   - **Modular Metrics Architecture**: Metrics are organized by module for better maintainability:
     - OTel SDK wiring via `otelsetup` plugin
@@ -162,8 +165,9 @@ Resources:
 - **Encrypter**: AES encryption for sensitive data protection
 - **Decrypter**: AES decryption for encrypted data processing
 - **ReqPreprocessor**: Request preprocessing (UUID generation, headers)
-- **Registry**: Standard Beckn registry lookup for participant information
-- **DeDiRegistry**: DeDi registry to lookup public keys for NP.
+- **ReqMapper**: Middleware to transform payload either between Beckn versions or against other platforms.
+- **Registry**: Standard Beckn registry or Beckn One DeDi registry lookup for participant information
+
 ## Quick Start
 
 ### Prerequisites

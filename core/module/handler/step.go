@@ -267,7 +267,6 @@ func (s *addRouteStep) Run(ctx *model.StepContext) error {
 	if s.metrics != nil && ctx.Route != nil {
 		s.metrics.RoutingDecisionsTotal.Add(ctx.Context, 1,
 			metric.WithAttributes(
-				telemetry.AttrRouteType.String(ctx.Route.TargetType),
 				telemetry.AttrTargetType.String(ctx.Route.TargetType),
 			))
 	}

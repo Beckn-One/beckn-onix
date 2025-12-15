@@ -8,11 +8,14 @@ log:
     - message_id
     - subscriber_id
     - module_id
-telemetry:
-  serviceName: "beckn-onix"
-  serviceVersion: "1.0.0"
-  enableMetrics: true
-  environment: "development"
+plugins:
+  otelsetup:
+    id: otelsetup
+    config:
+      serviceName: "beckn-onix"
+      serviceVersion: "1.0.0"
+      enableMetrics: "true"
+      environment: "development"
 http:
   port: 8081
   timeout:

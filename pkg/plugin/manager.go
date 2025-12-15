@@ -217,11 +217,33 @@ func (m *Manager) OtelSetup(ctx context.Context, cfg *Config) (*telemetry.Provid
 	if closer != nil {
 		m.closers = append(m.closers, func() {
 			if err := closer(); err != nil {
-				panic(err)
+				log.Errorf(context.Background(), err, "Failed to shutdown telemetry provider")
 			}
 		})
 	}
 	return provider, nil
+}
+
+// TransportWrapper returns a TransportWrapper instance based on the provided configuration.
+func (m *Manager) TransportWrapper(ctx context.Context, cfg *Config) (definition.TransportWrapper, error) {
+	twp, err := provider[definition.TransportWrapperProvider](m.plugins, cfg.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load provider for %s: %w", cfg.ID, err)
+	}
+
+	config := make(map[string]any, len(cfg.Config))
+	for k, v := range cfg.Config {
+		config[k] = v
+	}
+
+	wrapper, closer, err := twp.New(ctx, config)
+	if err != nil {
+		return nil, err
+	}
+	if closer != nil {
+		m.closers = append(m.closers, closer)
+	}
+	return wrapper, nil
 }
 
 // Step returns a Step instance based on the provided configuration.
