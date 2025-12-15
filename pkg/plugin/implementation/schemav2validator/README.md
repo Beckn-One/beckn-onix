@@ -10,6 +10,7 @@ Validates Beckn protocol requests against OpenAPI 3.1 specifications using kin-o
 - TTL-based caching with automatic refresh
 - Generic path matching (no hardcoded paths)
 - Direct schema validation without router overhead
+- Extended schema validation for domain-specific objects with `@context` references
 
 ## Configuration
 
@@ -20,6 +21,11 @@ schemaValidator:
     type: url
     location: https://example.com/openapi-spec.yaml
     cacheTTL: "3600"
+    extendedSchema_enabled: "true"
+    extendedSchema_cacheTTL: "86400"
+    extendedSchema_maxCacheSize: "100"
+    extendedSchema_downloadTimeout: "30"
+    extendedSchema_allowedDomains: "beckn.org,example.com"
 ```
 
 ### Configuration Parameters
@@ -29,24 +35,55 @@ schemaValidator:
 | `type` | string | Yes | - | Type of spec source: "url" or "file" ("dir" reserved for future) |
 | `location` | string | Yes | - | URL or file path to OpenAPI 3.1 spec |
 | `cacheTTL` | string | No | "3600" | Cache TTL in seconds before reloading spec |
+| `extendedSchema_enabled` | string | No | "false" | Enable extended schema validation for `@context` objects |
+| `extendedSchema_cacheTTL` | string | No | "86400" | Domain schema cache TTL in seconds |
+| `extendedSchema_maxCacheSize` | string | No | "100" | Maximum number of cached domain schemas |
+| `extendedSchema_downloadTimeout` | string | No | "30" | Timeout for downloading domain schemas |
+| `extendedSchema_allowedDomains` | string | No | "" | Comma-separated domain whitelist (empty = all allowed) |
 
 
 
 ## How It Works
 
-1. **Load Spec**: Loads OpenAPI spec from configured URL at startup
-2. **Extract Action**: Extracts `action` from request `context.action` field
-3. **Find Schema**: Searches all paths and HTTP methods in spec for schema with matching action:
-   - Checks `properties.context.action.enum` for the action value
-   - Also checks `properties.context.allOf[].properties.action.enum`
-   - Stops at first match
-4. **Validate**: Validates request body against matched schema using `Schema.VisitJSON()` with:
+### Initialization (Load Time)
+
+**Core Protocol Validation Setup**:
+1. **Load OpenAPI Spec**: Loads main spec from `location` (URL or file) with external `$ref` resolution
+2. **Build Action Index**: Creates action→schema map for O(1) lookup by scanning all paths/methods
+3. **Validate Spec**: Validates OpenAPI spec structure (warnings logged, non-fatal)
+4. **Cache Spec**: Stores loaded spec with `loadedAt` timestamp
+
+**Extended Schema Setup** (if `extendedSchema_enabled: "true"`):
+5. **Initialize Schema Cache**: Creates LRU cache with `maxCacheSize` (default: 100)
+6. **Start Background Refresh**: Launches goroutine with two tickers:
+   - Core spec refresh every `cacheTTL` seconds (default: 3600)
+   - Extended schema cleanup every `extendedSchema_cacheTTL` seconds (default: 86400)
+
+### Request Validation (Runtime)
+
+**Core Protocol Validation** (always runs):
+1. **Parse Request**: Unmarshal JSON and extract `context.action`
+2. **Lookup Schema**: O(1) lookup in action index (built at load time)
+3. **Validate**: Call `schema.Value.VisitJSON()` with:
    - Required fields validation
    - Data type validation (string, number, boolean, object, array)
    - Format validation (email, uri, date-time, uuid, etc.)
    - Constraint validation (min/max, pattern, enum, const)
    - Nested object and array validation
-5. **Return Errors**: Returns validation errors in ONIX format
+4. **Return Errors**: If validation fails, format and return errors
+
+**Extended Schema Validation** (if `extendedSchema_enabled: "true"` AND core validation passed):
+5. **Scan for @context**: Recursively traverse `message` field for objects with `@context` and `@type`
+6. **Filter Core Schemas**: Skip objects with `/schema/core/` in `@context` URL
+7. **Validate Each Domain Object**:
+   - Check domain whitelist (if `allowedDomains` configured)
+   - Transform `@context` URL: `context.jsonld` → `attributes.yaml`
+   - Load schema from URL/file (check cache first, download if miss)
+   - Find schema by `@type` (direct match or `x-jsonld.@type` fallback)
+   - Strip `@context` and `@type` metadata from object
+   - Validate remaining data against domain schema
+   - Prefix error paths with object location (e.g., `message.order.field`)
+8. **Return Errors**: Returns first validation error (fail-fast)
 
 ## Action-Based Matching
 
@@ -120,7 +157,33 @@ schemaValidator:
     cacheTTL: "3600"
 ```
 
+### With Extended Schema Validation
 
+```yaml
+schemaValidator:
+  id: schemav2validator
+  config:
+    type: url
+    location: https://raw.githubusercontent.com/beckn/protocol-specifications-new/refs/heads/draft/api-specs/beckn-protocol-api.yaml
+    cacheTTL: "3600"
+    extendedSchema_enabled: "true"
+    extendedSchema_cacheTTL: "86400"
+    extendedSchema_maxCacheSize: "100"
+    extendedSchema_downloadTimeout: "30"
+    extendedSchema_allowedDomains: "raw.githubusercontent.com,schemas.beckn.org"
+```
+
+**At Load Time**:
+- Creates LRU cache for domain schemas (max 100 entries)
+- Starts background goroutine for cache cleanup every 24 hours
+
+**At Runtime** (after core validation passes):
+- Scans `message` field for objects with `@context` and `@type`
+- Skips core Beckn schemas (containing `/schema/core/`)
+- Downloads domain schemas from `@context` URLs (cached for 24 hours)
+- Validates domain-specific data against schemas
+- Returns errors with full JSON paths (e.g., `message.order.chargingRate`)
+- Fail-fast: returns on first validation error
 
 ## Dependencies
 
