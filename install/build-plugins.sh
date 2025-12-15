@@ -31,6 +31,7 @@ for plugin in "${plugins[@]}"; do
         echo "✓ Successfully built $plugin plugin"
     else
         echo "✗ Failed to build $plugin plugin"
+        exit 1
     fi
 done
 
