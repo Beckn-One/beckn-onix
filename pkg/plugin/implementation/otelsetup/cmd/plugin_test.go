@@ -56,7 +56,7 @@ func TestMetricsProviderNew_Success(t *testing.T) {
 			require.NoError(t, err, "New() should not return error")
 			require.NotNil(t, telemetryProvider, "New() should return non-nil provider")
 
-			// Test cleanup function if it exists
+			// Metrics server is started inside provider when enabled; MetricsHandler is not exposed.
 			if cleanup != nil {
 				err := cleanup()
 				assert.NoError(t, err, "cleanup() should not return error")
@@ -165,12 +165,6 @@ func TestMetricsProviderNew_ConfigConversion(t *testing.T) {
 			require.NoError(t, err, "New() should not return error")
 			require.NotNil(t, telemetryProvider, "New() should return non-nil provider")
 
-			// Verify that the provider was created (we can't directly check internal config,
-			// but we can verify the provider is functional)
-			if tt.expectedConfig.EnableMetrics {
-				assert.NotNil(t, telemetryProvider.MetricsHandler, "MetricsHandler should be set when metrics enabled")
-			}
-
 			if cleanup != nil {
 				err := cleanup()
 				assert.NoError(t, err, "cleanup() should not return error")
@@ -230,11 +224,6 @@ func TestMetricsProviderNew_BooleanParsing(t *testing.T) {
 
 			require.NoError(t, err, "New() should not return error")
 			require.NotNil(t, telemetryProvider, "New() should return non-nil provider")
-
-			// Verify metrics handler is set based on enableMetrics
-			if tt.expected {
-				assert.NotNil(t, telemetryProvider.MetricsHandler, "MetricsHandler should be set when metrics enabled")
-			}
 
 			if cleanup != nil {
 				err := cleanup()
@@ -299,9 +288,6 @@ func TestMetricsProviderNew_DefaultValues(t *testing.T) {
 
 	require.NoError(t, err, "New() should not return error with empty config")
 	require.NotNil(t, telemetryProvider, "New() should return non-nil provider")
-
-	// Verify defaults are applied by checking that provider is functional
-	assert.NotNil(t, telemetryProvider.MetricsHandler, "MetricsHandler should be set with defaults")
 
 	if cleanup != nil {
 		err := cleanup()

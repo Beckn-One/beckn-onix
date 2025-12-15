@@ -2,8 +2,6 @@ package otelsetup
 
 import (
 	"context"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -56,16 +54,7 @@ func TestSetup_New_Success(t *testing.T) {
 			require.NotNil(t, provider.Shutdown, "Provider should have shutdown function")
 
 			if tt.cfg.EnableMetrics {
-				assert.NotNil(t, provider.MetricsHandler, "MetricsHandler should be set when metrics enabled")
 				assert.NotNil(t, provider.MeterProvider, "MeterProvider should be set when metrics enabled")
-
-				// Test that metrics handler works
-				rec := httptest.NewRecorder()
-				req := httptest.NewRequest("GET", "/metrics", nil)
-				provider.MetricsHandler.ServeHTTP(rec, req)
-				assert.Equal(t, http.StatusOK, rec.Code)
-			} else {
-				assert.Nil(t, provider.MetricsHandler, "MetricsHandler should be nil when metrics disabled")
 			}
 
 			// Test shutdown
@@ -123,14 +112,7 @@ func TestSetup_New_DefaultValues(t *testing.T) {
 	require.NotNil(t, provider)
 
 	// Verify defaults are applied by checking that provider is functional
-	assert.NotNil(t, provider.MetricsHandler, "MetricsHandler should be set with defaults")
 	assert.NotNil(t, provider.MeterProvider, "MeterProvider should be set with defaults")
-
-	// Test metrics endpoint
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/metrics", nil)
-	provider.MetricsHandler.ServeHTTP(rec, req)
-	assert.Equal(t, http.StatusOK, rec.Code)
 
 	// Cleanup
 	err = provider.Shutdown(ctx)
@@ -152,8 +134,7 @@ func TestSetup_New_MetricsDisabled(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, provider)
 
-	// When metrics are disabled, MetricsHandler should be nil
-	assert.Nil(t, provider.MetricsHandler, "MetricsHandler should be nil when metrics disabled")
+	// When metrics are disabled, MetricsHandler should be nil and MeterProvider should be nil
 	assert.Nil(t, provider.MeterProvider, "MeterProvider should be nil when metrics disabled")
 
 	// Shutdown should still work
@@ -182,6 +163,7 @@ func TestToPluginConfig_Success(t *testing.T) {
 				"serviceVersion": "1.0.0",
 				"enableMetrics":  "true",
 				"environment":    "test",
+				"metricsPort":    "",
 			},
 		},
 		{
@@ -198,6 +180,7 @@ func TestToPluginConfig_Success(t *testing.T) {
 				"serviceVersion": "2.0.0",
 				"enableMetrics":  "false",
 				"environment":    "production",
+				"metricsPort":    "",
 			},
 		},
 		{
@@ -214,6 +197,7 @@ func TestToPluginConfig_Success(t *testing.T) {
 				"serviceVersion": "",
 				"enableMetrics":  "true",
 				"environment":    "",
+				"metricsPort":    "",
 			},
 		},
 	}
@@ -263,11 +247,13 @@ func TestToPluginConfig_BooleanConversion(t *testing.T) {
 				ServiceVersion: "1.0.0",
 				EnableMetrics:  tt.enableMetrics,
 				Environment:    "test",
+				MetricsPort:    "",
 			}
 
 			result := ToPluginConfig(cfg)
 			require.NotNil(t, result)
 			assert.Equal(t, tt.expected, result.Config["enableMetrics"], "enableMetrics should be converted to string correctly")
+			assert.Equal(t, "", result.Config["metricsPort"], "metricsPort should be included even when empty")
 		})
 	}
 }

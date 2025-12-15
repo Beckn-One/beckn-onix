@@ -15,7 +15,6 @@ import (
 	"github.com/beckn-one/beckn-onix/core/module/handler"
 	"github.com/beckn-one/beckn-onix/pkg/plugin"
 	"github.com/beckn-one/beckn-onix/pkg/plugin/definition"
-	"github.com/beckn-one/beckn-onix/pkg/telemetry"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -125,7 +124,7 @@ func TestRunSuccess(t *testing.T) {
 	defer func() { newManagerFunc = originalNewManager }()
 
 	originalNewServer := newServerFunc
-	newServerFunc = func(ctx context.Context, mgr handler.PluginManager, cfg *Config, provider *telemetry.Provider) (http.Handler, error) {
+	newServerFunc = func(ctx context.Context, mgr handler.PluginManager, cfg *Config) (http.Handler, error) {
 		return http.NewServeMux(), nil
 	}
 	defer func() { newServerFunc = originalNewServer }()
@@ -176,14 +175,19 @@ func TestRunFailure(t *testing.T) {
 
 			// Mock dependencies
 			originalNewManager := newManagerFunc
-			// newManagerFunc = func(ctx context.Context, cfg *plugin.ManagerConfig) (*plugin.Manager, func(), error) {
-			// 	return tt.mockMgr()
-			// }
-			newManagerFunc = nil
+			// Ensure newManagerFunc is never nil to avoid panic if invoked.
+			newManagerFunc = func(ctx context.Context, cfg *plugin.ManagerConfig) (*plugin.Manager, func(), error) {
+				_, closer, err := tt.mockMgr()
+				if err != nil {
+					return nil, closer, err
+				}
+				// Return a deterministic error so the code path exits cleanly if reached.
+				return nil, closer, errors.New("mock manager error")
+			}
 			defer func() { newManagerFunc = originalNewManager }()
 
-			originalNewServer := newServerFunc
-			newServerFunc = func(ctx context.Context, mgr handler.PluginManager, cfg *Config, provider *telemetry.Provider) (http.Handler, error) {
+		originalNewServer := newServerFunc
+		newServerFunc = func(ctx context.Context, mgr handler.PluginManager, cfg *Config) (http.Handler, error) {
 				return tt.mockServer(ctx, mgr, cfg)
 			}
 			defer func() { newServerFunc = originalNewServer }()
@@ -314,7 +318,7 @@ func TestNewServerSuccess(t *testing.T) {
 				},
 			}
 
-			handler, err := newServer(context.Background(), mockMgr, cfg, nil)
+			handler, err := newServer(context.Background(), mockMgr, cfg)
 
 			if err != nil {
 				t.Errorf("Expected no error, but got: %v", err)
@@ -359,7 +363,7 @@ func TestNewServerFailure(t *testing.T) {
 				},
 			}
 
-			handler, err := newServer(context.Background(), mockMgr, cfg, nil)
+			handler, err := newServer(context.Background(), mockMgr, cfg)
 
 			if err == nil {
 				t.Errorf("Expected an error, but got nil")

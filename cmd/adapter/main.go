@@ -17,7 +17,6 @@ import (
 	"github.com/beckn-one/beckn-onix/core/module/handler"
 	"github.com/beckn-one/beckn-onix/pkg/log"
 	"github.com/beckn-one/beckn-onix/pkg/plugin"
-	"github.com/beckn-one/beckn-onix/pkg/telemetry"
 )
 
 // ApplicationPlugins holds application-level plugin configurations.
@@ -99,28 +98,23 @@ func validateConfig(cfg *Config) error {
 }
 
 // initPlugins initializes application-level plugins including telemetry.
-func initPlugins(ctx context.Context, mgr *plugin.Manager, otelSetupCfg *plugin.Config) (*telemetry.Provider, error) {
+func initPlugins(ctx context.Context, mgr *plugin.Manager, otelSetupCfg *plugin.Config) error {
 	if otelSetupCfg == nil {
 		log.Info(ctx, "Telemetry config not provided; skipping OpenTelemetry setup")
-		return nil, nil
+		return nil
 	}
 
 	log.Infof(ctx, "Initializing telemetry via plugin id=%s", otelSetupCfg.ID)
-	otelProvider, err := mgr.OtelSetup(ctx, otelSetupCfg)
+	_, err := mgr.OtelSetup(ctx, otelSetupCfg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize telemetry plugin: %w", err)
+		return fmt.Errorf("failed to initialize telemetry plugin: %w", err)
 	}
-	return otelProvider, nil
+	return nil
 }
 
 // newServer creates and initializes the HTTP server.
-func newServer(ctx context.Context, mgr handler.PluginManager, cfg *Config, otelProvider *telemetry.Provider) (http.Handler, error) {
+func newServer(ctx context.Context, mgr handler.PluginManager, cfg *Config) (http.Handler, error) {
 	mux := http.NewServeMux()
-
-	if otelProvider != nil && otelProvider.MetricsHandler != nil {
-		mux.Handle("/metrics", otelProvider.MetricsHandler)
-		log.Infof(ctx, "Metrics endpoint registered at /metrics")
-	}
 
 	if err := module.Register(ctx, cfg.Modules, mux, mgr); err != nil {
 		return nil, fmt.Errorf("failed to register modules: %w", err)
@@ -154,14 +148,13 @@ func run(ctx context.Context, configPath string) error {
 	log.Debug(ctx, "Plugin manager loaded.")
 
 	// Initialize plugins including telemetry.
-	otelProvider, err := initPlugins(ctx, mgr, cfg.Plugins.OtelSetup)
-	if err != nil {
+	if err := initPlugins(ctx, mgr, cfg.Plugins.OtelSetup); err != nil {
 		return fmt.Errorf("failed to initialize plugins: %w", err)
 	}
 
 	// Initialize HTTP server.
 	log.Infof(ctx, "Initializing HTTP server")
-	srv, err := newServerFunc(ctx, mgr, cfg, otelProvider)
+	srv, err := newServerFunc(ctx, mgr, cfg)
 	if err != nil {
 		return fmt.Errorf("failed to initialize server: %w", err)
 	}

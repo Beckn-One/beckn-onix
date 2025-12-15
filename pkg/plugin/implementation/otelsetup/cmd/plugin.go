@@ -27,6 +27,7 @@ func (m metricsProvider) New(ctx context.Context, config map[string]string) (*te
 		ServiceName:    config["serviceName"],
 		ServiceVersion: config["serviceVersion"],
 		Environment:    config["environment"],
+		MetricsPort:    config["metricsPort"],
 	}
 
 	// Parse enableMetrics as boolean

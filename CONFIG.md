@@ -201,7 +201,7 @@ log:
 **Required**: No  
 **Description**: OpenTelemetry configuration controlling whether the Prometheus exporter is enabled.
 
-**Important**: This block is optional—omit it to run without telemetry. When present, the `/metrics` endpoint is exposed only if `enableMetrics: true`.
+**Important**: This block is optional—omit it to run without telemetry. When present, the `/metrics` endpoint is exposed on a separate port (configurable via `metricsPort`) only if `enableMetrics: true`.
 
 ##### Parameters:
 
@@ -238,6 +238,12 @@ log:
 **Default**: `"development"`  
 **Description**: Sets the `deployment.environment` attribute (e.g., `development`, `staging`, `production`).
 
+###### `config.metricsPort`
+**Type**: `string`  
+**Required**: No  
+**Default**: `"9090"`  
+**Description**: Port on which the metrics HTTP server will listen. The metrics endpoint is hosted on a separate server from the main application.
+
 **Example - Enable Metrics** (matches `config/local-simple.yaml`):
 ```yaml
 plugins:
@@ -248,22 +254,25 @@ plugins:
       serviceVersion: "1.0.0"
       enableMetrics: "true"
       environment: "development"
+      metricsPort: "9090"
 ```
 
 ### Accessing Metrics
 
-When `plugins.otelsetup.config.enableMetrics: "true"`, scrape metrics at:
+When `plugins.otelsetup.config.enableMetrics: "true"`, the metrics endpoint is hosted on a separate HTTP server. Scrape metrics at:
 
 ```
-http://your-server:port/metrics
+http://your-server:9090/metrics
 ```
+
+**Note**: The metrics server runs on the port specified by `config.metricsPort` (default: `9090`), which is separate from the main application port configured in `http.port`.
 
 ### Metrics Collected
 
 Metrics are organized by module for better maintainability and encapsulation:
 
 #### OTel Setup (from `otelsetup` plugin)
-- Prometheus exporter & `/metrics` handler registration
+- Prometheus exporter & `/metrics` endpoint on separate HTTP server
 - Go runtime instrumentation (`go_*`), resource attributes, and meter provider wiring
 
 #### Step Execution Metrics (from `telemetry` package)
@@ -1141,7 +1150,7 @@ routingRules:
 - Embedded Ed25519 keys
 - Local Redis
 - Simplified routing
-- Optional metrics collection (available at `/metrics` when enabled)
+- Optional metrics collection (available on separate port when enabled)
 
 **Use Case**: Quick local development and testing
 
@@ -1164,7 +1173,7 @@ modules:
           config: {}
 ```
 
-**Metrics Access**: When enabled, access metrics at `http://localhost:8081/metrics`
+**Metrics Access**: When enabled, access metrics at `http://localhost:9090/metrics` (default metrics port, configurable via `plugins.otelsetup.config.metricsPort`)
 
 ### 2. Local Development (Vault Mode)
 
@@ -1199,7 +1208,7 @@ modules:
 - Production Redis
 - Remote plugin loading
 - Pub/Sub integration
-- OpenTelemetry metrics enabled (available at `/metrics` endpoint)
+- OpenTelemetry metrics enabled (available on separate port, default: 9090)
 
 **Use Case**: Single deployment serving both roles
 
@@ -1237,7 +1246,7 @@ modules:
 ```
 
 **Metrics Access**: 
-- Prometheus scraping: `http://your-server:port/metrics`
+- Prometheus scraping: `http://your-server:9090/metrics` (default metrics port, configurable via `plugins.otelsetup.config.metricsPort`)
 
 ### 4. Production BAP-Only Mode
 
