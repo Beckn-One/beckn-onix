@@ -73,6 +73,11 @@ func (m *MockPluginManager) KeyManager(ctx context.Context, cache definition.Cac
 	return nil, nil
 }
 
+// TransportWrapper returns a mock implementation of the TransportWrapper interface.
+func (m *MockPluginManager) TransportWrapper(ctx context.Context, cfg *plugin.Config) (definition.TransportWrapper, error) {
+	return nil, nil
+}
+
 // SchemaValidator returns a mock implementation of the SchemaValidator interface.
 func (m *MockPluginManager) SchemaValidator(ctx context.Context, cfg *plugin.Config) (definition.SchemaValidator, error) {
 	return nil, nil
@@ -170,14 +175,19 @@ func TestRunFailure(t *testing.T) {
 
 			// Mock dependencies
 			originalNewManager := newManagerFunc
-			// newManagerFunc = func(ctx context.Context, cfg *plugin.ManagerConfig) (*plugin.Manager, func(), error) {
-			// 	return tt.mockMgr()
-			// }
-			newManagerFunc = nil
+			// Ensure newManagerFunc is never nil to avoid panic if invoked.
+			newManagerFunc = func(ctx context.Context, cfg *plugin.ManagerConfig) (*plugin.Manager, func(), error) {
+				_, closer, err := tt.mockMgr()
+				if err != nil {
+					return nil, closer, err
+				}
+				// Return a deterministic error so the code path exits cleanly if reached.
+				return nil, closer, errors.New("mock manager error")
+			}
 			defer func() { newManagerFunc = originalNewManager }()
 
-			originalNewServer := newServerFunc
-			newServerFunc = func(ctx context.Context, mgr handler.PluginManager, cfg *Config) (http.Handler, error) {
+		originalNewServer := newServerFunc
+		newServerFunc = func(ctx context.Context, mgr handler.PluginManager, cfg *Config) (http.Handler, error) {
 				return tt.mockServer(ctx, mgr, cfg)
 			}
 			defer func() { newServerFunc = originalNewServer }()

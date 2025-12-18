@@ -64,8 +64,44 @@ The **Beckn Protocol** is an open protocol that enables location-aware, local co
 ### 📊 **Observability**
 - **Structured Logging**: JSON-formatted logs with contextual information
 - **Transaction Tracking**: End-to-end request tracing with unique IDs
-- **Metrics Support**: Performance and business metrics collection
+- **OpenTelemetry Metrics**: Pull-based metrics exposed via `/metrics`
+  - RED metrics for every module and action (rate, errors, duration)
+  - Per-step histograms with error attribution
+  - Cache, routing, plugin, and business KPIs (signature/schema validations, Beckn messages)
+  - Native Prometheus exporter with Grafana dashboards & alert rules (`monitoring/`)
+  - Opt-in: add a `plugins.otelsetup` block in your config to wire the `otelsetup` plugin; omit it to run without metrics. Example:
+
+    ```yaml
+    plugins:
+      otelsetup:
+        id: otelsetup
+        config:
+          serviceName: "beckn-onix"
+          serviceVersion: "1.0.0"
+          enableMetrics: "true"
+          environment: "development"
+    ```
+  - **Modular Metrics Architecture**: Metrics are organized by module for better maintainability:
+    - OTel SDK wiring via `otelsetup` plugin
+    - Step execution metrics in `telemetry` package
+    - Handler metrics (signature, schema, routing) in `handler` module
+    - Cache metrics in `cache` plugin
+- **Runtime Instrumentation**: Go runtime + Redis client metrics baked in
 - **Health Checks**: Liveness and readiness probes for Kubernetes
+
+#### Monitoring Quick Start
+```bash
+./install/build-plugins.sh
+go build -o beckn-adapter ./cmd/adapter
+./beckn-adapter --config=config/local-simple.yaml
+cd monitoring && docker-compose -f docker-compose-monitoring.yml up -d
+open http://localhost:3000 # Grafana (admin/admin)
+```
+Resources:
+- `monitoring/prometheus.yml` – scrape config
+- `monitoring/prometheus-alerts.yml` – alert rules (RED, cache, step, plugin)
+- `monitoring/grafana/dashboards/beckn-onix-overview.json` – curated dashboard
+- `docs/METRICS_RUNBOOK.md` – runbook with PromQL recipes & troubleshooting
 
 ### 🌐 **Multi-Domain Support**
 - **Retail & E-commerce**: Product search, order management, fulfillment tracking
@@ -355,6 +391,15 @@ modules:
 |--------|----------|-------------|
 | POST | `/bpp/receiver/*` | Receives all BAP requests |
 | POST | `/bpp/caller/on_*` | Sends responses back to BAP |
+
+### Observability Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/health` | Health check endpoint |
+| GET | `/metrics` | Prometheus metrics endpoint (when telemetry is enabled) |
+
+**Note**: The `/metrics` endpoint is available when `telemetry.enableMetrics: true` in the configuration file. It returns metrics in Prometheus format.
 
 ## Documentation
 

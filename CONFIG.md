@@ -6,13 +6,14 @@
 3. [Top-Level Configuration](#top-level-configuration)
 4. [HTTP Configuration](#http-configuration)
 5. [Logging Configuration](#logging-configuration)
-6. [Plugin Manager Configuration](#plugin-manager-configuration)
-7. [Module Configuration](#module-configuration)
-8. [Handler Configuration](#handler-configuration)
-9. [Plugin Configuration](#plugin-configuration)
-10. [Routing Configuration](#routing-configuration)
-11. [Deployment Scenarios](#deployment-scenarios)
-12. [Configuration Examples](#configuration-examples)
+6. [Metrics Configuration](#metrics-configuration)
+7. [Plugin Manager Configuration](#plugin-manager-configuration)
+8. [Module Configuration](#module-configuration)
+9. [Handler Configuration](#handler-configuration)
+10. [Plugin Configuration](#plugin-configuration)
+11. [Routing Configuration](#routing-configuration)
+12. [Deployment Scenarios](#deployment-scenarios)
+13. [Configuration Examples](#configuration-examples)
 
 ---
 
@@ -70,6 +71,7 @@ The main configuration file follows this structure:
 ```yaml
 appName: "onix-local"
 log: {...}
+metrics: {...}
 http: {...}
 pluginManager: {...}
 modules: [...]
@@ -184,6 +186,120 @@ log:
     - subscriber_id
     - module_id
 ```
+
+---
+
+## Application-Level Plugins Configuration
+
+### `plugins`
+**Type**: `object`  
+**Required**: No  
+**Description**: Application-level plugin configurations. These plugins apply to the entire application and are shared across all modules.
+
+#### `plugins.otelsetup`
+**Type**: `object`  
+**Required**: No  
+**Description**: OpenTelemetry configuration controlling whether the Prometheus exporter is enabled.
+
+**Important**: This block is optional—omit it to run without telemetry. When present, the `/metrics` endpoint is exposed on a separate port (configurable via `metricsPort`) only if `enableMetrics: true`.
+
+##### Parameters:
+
+###### `id`
+**Type**: `string`  
+**Required**: Yes  
+**Description**: Plugin identifier. Must be `"otelsetup"`.
+
+###### `config`
+**Type**: `object`  
+**Required**: Yes  
+**Description**: Plugin configuration parameters.
+
+###### `config.enableMetrics`
+**Type**: `string` (boolean)  
+**Required**: No  
+**Default**: `"true"`  
+**Description**: Enables metrics collection and the `/metrics` endpoint. Must be `"true"` or `"false"` as a string.
+
+###### `config.serviceName`
+**Type**: `string`  
+**Required**: No  
+**Default**: `"beckn-onix"`  
+**Description**: Sets the `service.name` resource attribute.
+
+###### `config.serviceVersion`
+**Type**: `string`  
+**Required**: No  
+**Description**: Sets the `service.version` resource attribute.
+
+###### `config.environment`
+**Type**: `string`  
+**Required**: No  
+**Default**: `"development"`  
+**Description**: Sets the `deployment.environment` attribute (e.g., `development`, `staging`, `production`).
+
+###### `config.metricsPort`
+**Type**: `string`  
+**Required**: No  
+**Default**: `"9090"`  
+**Description**: Port on which the metrics HTTP server will listen. The metrics endpoint is hosted on a separate server from the main application.
+
+**Example - Enable Metrics** (matches `config/local-simple.yaml`):
+```yaml
+plugins:
+  otelsetup:
+    id: otelsetup
+    config:
+      serviceName: "beckn-onix"
+      serviceVersion: "1.0.0"
+      enableMetrics: "true"
+      environment: "development"
+      metricsPort: "9090"
+```
+
+### Accessing Metrics
+
+When `plugins.otelsetup.config.enableMetrics: "true"`, the metrics endpoint is hosted on a separate HTTP server. Scrape metrics at:
+
+```
+http://your-server:9090/metrics
+```
+
+**Note**: The metrics server runs on the port specified by `config.metricsPort` (default: `9090`), which is separate from the main application port configured in `http.port`.
+
+### Metrics Collected
+
+Metrics are organized by module for better maintainability and encapsulation:
+
+#### OTel Setup (from `otelsetup` plugin)
+- Prometheus exporter & `/metrics` endpoint on separate HTTP server
+- Go runtime instrumentation (`go_*`), resource attributes, and meter provider wiring
+
+#### Step Execution Metrics (from `telemetry` package)
+- `onix_step_executions_total`, `onix_step_execution_duration_seconds`, `onix_step_errors_total`
+
+#### Handler Metrics (from `handler` module)
+- `beckn_signature_validations_total` - Signature validation attempts
+- `beckn_schema_validations_total` - Schema validation attempts
+- `onix_routing_decisions_total` - Routing decisions taken by handler
+
+#### Cache Metrics (from `cache` plugin)
+- `onix_cache_operations_total`, `onix_cache_hits_total`, `onix_cache_misses_total`
+
+#### Plugin Metrics (from `telemetry` package)
+- `onix_plugin_execution_duration_seconds`, `onix_plugin_errors_total`
+
+#### Runtime Metrics
+- Go runtime metrics (`go_*`) and Redis instrumentation via `redisotel`
+
+Each metric includes consistent labels such as `module`, `role`, `action`, `status`, `step`, `plugin_id`, and `schema_version` to enable low-cardinality dashboards.
+
+**Note**: Metric definitions are now located in their respective modules:
+- OTel setup: `pkg/plugin/implementation/otelsetup`
+- Step metrics: `core/module/handler/step_metrics.go`
+- Handler metrics: `core/module/handler/handlerMetrics.go`
+- Cache metrics: `pkg/plugin/implementation/cache/cache_metrics.go`
+- Plugin metrics: `pkg/telemetry/pluginMetrics.go`
 
 ---
 
@@ -1045,6 +1161,7 @@ routingRules:
 - Embedded Ed25519 keys
 - Local Redis
 - Simplified routing
+- Optional metrics collection (available on separate port when enabled)
 
 **Use Case**: Quick local development and testing
 
@@ -1052,6 +1169,10 @@ routingRules:
 appName: "onix-local"
 log:
   level: debug
+metrics:
+  enabled: true
+  exporterType: prometheus
+  serviceName: onix-local
 http:
   port: 8081
 modules:
@@ -1062,6 +1183,8 @@ modules:
           id: simplekeymanager
           config: {}
 ```
+
+**Metrics Access**: When enabled, access metrics at `http://localhost:9090/metrics` (default metrics port, configurable via `plugins.otelsetup.config.metricsPort`)
 
 ### 2. Local Development (Vault Mode)
 
@@ -1096,10 +1219,21 @@ modules:
 - Production Redis
 - Remote plugin loading
 - Pub/Sub integration
+- OpenTelemetry metrics enabled (available on separate port, default: 9090)
 
 **Use Case**: Single deployment serving both roles
 
 ```yaml
+appName: "onix-production"
+log:
+  level: info
+  destinations:
+    - type: stdout
+metrics:
+  enabled: true
+  exporterType: prometheus
+  serviceName: beckn-onix
+  serviceVersion: "1.0.0"
 pluginManager:
   root: /app/plugins
   remoteRoot: /mnt/gcs/plugins/plugins_bundle.zip
@@ -1121,6 +1255,9 @@ modules:
             project: ${projectID}
             topic: bapNetworkReciever
 ```
+
+**Metrics Access**: 
+- Prometheus scraping: `http://your-server:9090/metrics` (default metrics port, configurable via `plugins.otelsetup.config.metricsPort`)
 
 ### 4. Production BAP-Only Mode
 
