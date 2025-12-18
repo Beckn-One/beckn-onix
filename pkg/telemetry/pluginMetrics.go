@@ -14,9 +14,9 @@ import (
 // Note: Most metrics have been moved to their respective modules. Only plugin-level
 // metrics remain here. See:
 // - OTel setup: pkg/plugin/implementation/otelsetup
-// - Step metrics: pkg/telemetry/step_metrics.go
-// - Cache metrics: pkg/plugin/implementation/cache/metrics.go
-// - Handler metrics: core/module/handler/metrics.go
+// - Step metrics: core/module/handler/step_metrics.go
+// - Cache metrics: pkg/plugin/implementation/cache/cache_metrics.go
+// - Handler metrics: core/module/handler/handlerMetrics.go
 type Metrics struct {
 	PluginExecutionDuration metric.Float64Histogram
 	PluginErrorsTotal       metric.Int64Counter

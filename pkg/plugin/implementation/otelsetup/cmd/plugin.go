@@ -11,7 +11,7 @@ import (
 	"github.com/beckn-one/beckn-onix/pkg/telemetry"
 )
 
-// metricsProvider implements the MetricsProvider interface for the otelsetup plugin.
+// metricsProvider implements the OtelSetupMetricsProvider interface for the otelsetup plugin.
 type metricsProvider struct {
 	impl otelsetup.Setup
 }

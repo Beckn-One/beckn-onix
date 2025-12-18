@@ -23,7 +23,7 @@ import (
 )
 
 // Setup wires the telemetry provider. This is the concrete implementation
-// behind the MetricsProvider interface.
+// behind the OtelSetupMetricsProvider interface.
 type Setup struct{}
 
 // Config represents OpenTelemetry related configuration.
@@ -151,7 +151,8 @@ func (Setup) New(ctx context.Context, cfg *Config) (*telemetry.Provider, error) 
 	}()
 
 	return &telemetry.Provider{
-		MeterProvider: meterProvider,
+		MeterProvider:  meterProvider,
+		MetricsHandler: metricsHandler,
 		Shutdown: func(shutdownCtx context.Context) error {
 			log.Infof(ctx, "Shutting down metrics server...")
 			// Shutdown the metrics server

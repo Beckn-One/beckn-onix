@@ -206,7 +206,7 @@ func (m *Manager) OtelSetup(ctx context.Context, cfg *Config) (*telemetry.Provid
 		return nil, nil
 	}
 
-	otp, err := provider[definition.MetricsProvider](m.plugins, cfg.ID)
+	otp, err := provider[definition.OtelSetupMetricsProvider](m.plugins, cfg.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load provider for %s: %w", cfg.ID, err)
 	}

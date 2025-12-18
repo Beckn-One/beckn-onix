@@ -1,4 +1,4 @@
-package telemetry
+package handler
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 
 	"github.com/beckn-one/beckn-onix/pkg/log"
 	"github.com/beckn-one/beckn-onix/pkg/model"
+	"github.com/beckn-one/beckn-onix/pkg/telemetry"
 )
 
 // StepRunner represents the minimal contract required for step instrumentation.
@@ -56,9 +57,9 @@ func (is *InstrumentedStep) Run(ctx *model.StepContext) error {
 	duration := time.Since(start).Seconds()
 
 	attrs := []attribute.KeyValue{
-		AttrModule.String(is.moduleName),
-		AttrStep.String(is.stepName),
-		AttrRole.String(string(ctx.Role)),
+		telemetry.AttrModule.String(is.moduleName),
+		telemetry.AttrStep.String(is.stepName),
+		telemetry.AttrRole.String(string(ctx.Role)),
 	}
 
 	is.metrics.StepExecutionTotal.Add(ctx.Context, 1, metric.WithAttributes(attrs...))
@@ -73,10 +74,11 @@ func (is *InstrumentedStep) Run(ctx *model.StepContext) error {
 			}
 		}
 
-		errorAttrs := append(attrs, AttrErrorType.String(errorType))
+		errorAttrs := append(attrs, telemetry.AttrErrorType.String(errorType))
 		is.metrics.StepErrorsTotal.Add(ctx.Context, 1, metric.WithAttributes(errorAttrs...))
 		log.Errorf(ctx.Context, err, "Step %s failed", is.stepName)
 	}
 
 	return err
 }
+

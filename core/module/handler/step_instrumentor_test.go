@@ -1,4 +1,4 @@
-package telemetry
+package handler
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/beckn-one/beckn-onix/pkg/model"
+	"github.com/beckn-one/beckn-onix/pkg/telemetry"
 	"github.com/stretchr/testify/require"
 )
 
@@ -19,7 +20,7 @@ func (s stubStep) Run(ctx *model.StepContext) error {
 
 func TestInstrumentedStepSuccess(t *testing.T) {
 	ctx := context.Background()
-	provider, err := NewTestProvider(ctx)
+	provider, err := telemetry.NewTestProvider(ctx)
 	require.NoError(t, err)
 	defer provider.Shutdown(context.Background())
 
@@ -35,7 +36,7 @@ func TestInstrumentedStepSuccess(t *testing.T) {
 
 func TestInstrumentedStepError(t *testing.T) {
 	ctx := context.Background()
-	provider, err := NewTestProvider(ctx)
+	provider, err := telemetry.NewTestProvider(ctx)
 	require.NoError(t, err)
 	defer provider.Shutdown(context.Background())
 
@@ -48,3 +49,4 @@ func TestInstrumentedStepError(t *testing.T) {
 	}
 	require.Error(t, step.Run(stepCtx))
 }
+

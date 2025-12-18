@@ -1,4 +1,4 @@
-package telemetry
+package handler
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 
 	"go.opentelemetry.io/otel/metric"
 
+	"github.com/beckn-one/beckn-onix/pkg/telemetry"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -15,7 +16,7 @@ func TestGetStepMetrics_Success(t *testing.T) {
 	ctx := context.Background()
 
 	// Initialize telemetry provider first
-	provider, err := NewTestProvider(ctx)
+	provider, err := telemetry.NewTestProvider(ctx)
 	require.NoError(t, err)
 	defer provider.Shutdown(context.Background())
 
@@ -34,7 +35,7 @@ func TestGetStepMetrics_ConcurrentAccess(t *testing.T) {
 	ctx := context.Background()
 
 	// Initialize telemetry provider first
-	provider, err := NewTestProvider(ctx)
+	provider, err := telemetry.NewTestProvider(ctx)
 	require.NoError(t, err)
 	defer provider.Shutdown(context.Background())
 
@@ -71,7 +72,7 @@ func TestStepMetrics_Instruments(t *testing.T) {
 	ctx := context.Background()
 
 	// Initialize telemetry provider
-	provider, err := NewTestProvider(ctx)
+	provider, err := telemetry.NewTestProvider(ctx)
 	require.NoError(t, err)
 	defer provider.Shutdown(context.Background())
 
@@ -87,19 +88,19 @@ func TestStepMetrics_Instruments(t *testing.T) {
 	// Test StepExecutionDuration
 	require.NotPanics(t, func() {
 		metrics.StepExecutionDuration.Record(ctx, 0.5,
-			metric.WithAttributes(AttrStep.String("test-step"), AttrModule.String("test-module")))
+			metric.WithAttributes(telemetry.AttrStep.String("test-step"), telemetry.AttrModule.String("test-module")))
 	}, "StepExecutionDuration.Record should not panic")
 
 	// Test StepExecutionTotal
 	require.NotPanics(t, func() {
 		metrics.StepExecutionTotal.Add(ctx, 1,
-			metric.WithAttributes(AttrStep.String("test-step"), AttrModule.String("test-module")))
+			metric.WithAttributes(telemetry.AttrStep.String("test-step"), telemetry.AttrModule.String("test-module")))
 	}, "StepExecutionTotal.Add should not panic")
 
 	// Test StepErrorsTotal
 	require.NotPanics(t, func() {
 		metrics.StepErrorsTotal.Add(ctx, 1,
-			metric.WithAttributes(AttrStep.String("test-step"), AttrModule.String("test-module")))
+			metric.WithAttributes(telemetry.AttrStep.String("test-step"), telemetry.AttrModule.String("test-module")))
 	}, "StepErrorsTotal.Add should not panic")
 
 	// Verify metrics are exposed via HTTP handler
@@ -113,7 +114,7 @@ func TestStepMetrics_MultipleCalls(t *testing.T) {
 	ctx := context.Background()
 
 	// Initialize telemetry provider
-	provider, err := NewTestProvider(ctx)
+	provider, err := telemetry.NewTestProvider(ctx)
 	require.NoError(t, err)
 	defer provider.Shutdown(context.Background())
 
@@ -127,3 +128,4 @@ func TestStepMetrics_MultipleCalls(t *testing.T) {
 		assert.NotNil(t, metrics.StepErrorsTotal, "StepErrorsTotal should be initialized")
 	}
 }
+

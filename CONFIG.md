@@ -296,10 +296,10 @@ Each metric includes consistent labels such as `module`, `role`, `action`, `stat
 
 **Note**: Metric definitions are now located in their respective modules:
 - OTel setup: `pkg/plugin/implementation/otelsetup`
-- Step metrics: `pkg/telemetry/step_metrics.go`
-- Handler metrics: `core/module/handler/metrics.go`
-- Cache metrics: `pkg/plugin/implementation/cache/metrics.go`
-- Plugin metrics: `pkg/telemetry/metrics.go`
+- Step metrics: `core/module/handler/step_metrics.go`
+- Handler metrics: `core/module/handler/handlerMetrics.go`
+- Cache metrics: `pkg/plugin/implementation/cache/cache_metrics.go`
+- Plugin metrics: `pkg/telemetry/pluginMetrics.go`
 
 ---
 

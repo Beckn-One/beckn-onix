@@ -13,7 +13,6 @@ import (
 	"github.com/beckn-one/beckn-onix/pkg/plugin"
 	"github.com/beckn-one/beckn-onix/pkg/plugin/definition"
 	"github.com/beckn-one/beckn-onix/pkg/response"
-	"github.com/beckn-one/beckn-onix/pkg/telemetry"
 )
 
 // stdHandler orchestrates the execution of defined processing steps.
@@ -311,7 +310,7 @@ func (h *stdHandler) initSteps(ctx context.Context, mgr PluginManager, cfg *Conf
 		if err != nil {
 			return err
 		}
-		instrumentedStep, wrapErr := telemetry.NewInstrumentedStep(s, step, h.moduleName)
+		instrumentedStep, wrapErr := NewInstrumentedStep(s, step, h.moduleName)
 		if wrapErr != nil {
 			log.Warnf(ctx, "Failed to instrument step %s: %v", step, wrapErr)
 			h.steps = append(h.steps, s)

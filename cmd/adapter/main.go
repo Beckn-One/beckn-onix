@@ -17,6 +17,7 @@ import (
 	"github.com/beckn-one/beckn-onix/core/module/handler"
 	"github.com/beckn-one/beckn-onix/pkg/log"
 	"github.com/beckn-one/beckn-onix/pkg/plugin"
+	"github.com/beckn-one/beckn-onix/pkg/telemetry"
 )
 
 // ApplicationPlugins holds application-level plugin configurations.
@@ -97,18 +98,31 @@ func validateConfig(cfg *Config) error {
 	return nil
 }
 
-// initPlugins initializes application-level plugins including telemetry.
-func initPlugins(ctx context.Context, mgr *plugin.Manager, otelSetupCfg *plugin.Config) error {
-	if otelSetupCfg == nil {
-		log.Info(ctx, "Telemetry config not provided; skipping OpenTelemetry setup")
+// loadAppPlugin is a generic function to load and validate application-level plugins.
+func loadAppPlugin[T any](ctx context.Context, name string, cfg *plugin.Config, mgrFunc func(context.Context, *plugin.Config) (T, error)) error {
+	if cfg == nil {
+		log.Debugf(ctx, "Skipping %s plugin: not configured", name)
 		return nil
 	}
 
-	log.Infof(ctx, "Initializing telemetry via plugin id=%s", otelSetupCfg.ID)
-	_, err := mgr.OtelSetup(ctx, otelSetupCfg)
+	_, err := mgrFunc(ctx, cfg)
 	if err != nil {
-		return fmt.Errorf("failed to initialize telemetry plugin: %w", err)
+		return fmt.Errorf("failed to load %s plugin (%s): %w", name, cfg.ID, err)
 	}
+
+	log.Debugf(ctx, "Loaded %s plugin: %s", name, cfg.ID)
+	return nil
+}
+
+// initAppPlugins initializes application-level plugins including telemetry.
+// This function is designed to be extensible for future plugin types.
+func initAppPlugins(ctx context.Context, mgr *plugin.Manager, cfg ApplicationPlugins) error {
+	if err := loadAppPlugin(ctx, "OtelSetup", cfg.OtelSetup, func(ctx context.Context, cfg *plugin.Config) (*telemetry.Provider, error) {
+		return mgr.OtelSetup(ctx, cfg)
+	}); err != nil {
+		return fmt.Errorf("failed to initialize application plugins: %w", err)
+	}
+
 	return nil
 }
 
@@ -148,7 +162,7 @@ func run(ctx context.Context, configPath string) error {
 	log.Debug(ctx, "Plugin manager loaded.")
 
 	// Initialize plugins including telemetry.
-	if err := initPlugins(ctx, mgr, cfg.Plugins.OtelSetup); err != nil {
+	if err := initAppPlugins(ctx, mgr, cfg.Plugins); err != nil {
 		return fmt.Errorf("failed to initialize plugins: %w", err)
 	}
 
