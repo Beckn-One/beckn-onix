@@ -176,6 +176,51 @@ func newValidateSchemaStep(schemaValidator definition.SchemaValidator) (definiti
 	return &validateSchemaStep{validator: schemaValidator}, nil
 }
 
+// validateOndcStep represents the ONDC validation step.
+type validateOndcStep struct {
+	validator definition.OndcValidator
+}
+
+// Run executes the ONDC validation step.
+func (s *validateOndcStep) Run(ctx *model.StepContext) error {
+	if err := s.validator.ValidatePayload(ctx, ctx.Request.URL, ctx.Body); err != nil {
+		return fmt.Errorf("ondc validation failed: %w", err)
+	}
+	return nil
+}
+
+// newValidateOndcStep creates and returns the validateOndc step after validation.
+func newValidateOndcStep(ondcValidator definition.OndcValidator) (definition.Step, error) {
+	if ondcValidator == nil {
+		return nil, fmt.Errorf("invalid config: OndcValidator plugin not configured")
+	}
+	log.Debug(context.Background(), "adding ondc validator")
+	return &validateOndcStep{validator: ondcValidator}, nil
+}
+
+// validateOndcCallSaveStep represents the ONDC call save validation step.
+type validateOndcCallSaveStep struct {
+	validator definition.OndcValidator
+}
+
+// Run executes the ONDC call save validation step.
+func (s *validateOndcCallSaveStep) Run(ctx *model.StepContext) error {
+	if err := s.validator.SaveValidationData(ctx.Context, ctx.Request.URL, ctx.Body); err != nil {
+		return fmt.Errorf("ondc call save validation failed: %w", err)
+	}
+	return nil
+}
+
+
+// newValidateOndcCallSaveStep creates and returns the validateOndcCallSave step after validation.
+func newValidateOndcCallSaveStep(ondcValidator definition.OndcValidator) (definition.Step, error) {
+	if ondcValidator == nil {
+		return nil, fmt.Errorf("invalid config: OndcValidator plugin not configured")
+	}
+	log.Debug(context.Background(), "adding ondc call save validator")
+	return &validateOndcCallSaveStep{validator: ondcValidator}, nil
+}
+
 // Run executes the schema validation step.
 func (s *validateSchemaStep) Run(ctx *model.StepContext) error {
 	if err := s.validator.Validate(ctx, ctx.Request.URL, ctx.Body); err != nil {

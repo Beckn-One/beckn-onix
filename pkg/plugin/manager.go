@@ -430,6 +430,26 @@ func (m *Manager) Validator(ctx context.Context, cfg *Config) (definition.Schema
 	panic("unimplemented")
 }
 
+// OndcValidator returns an OndcValidator instance based on the provided configuration.
+func (m *Manager) OndcValidator(ctx context.Context,cache definition.Cache, cfg *Config) (definition.OndcValidator, error) {
+	ovp, err := provider[definition.OndcValidatorProvider](m.plugins, cfg.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load provider for %s: %w", cfg.ID, err)
+	}
+	ov, closer, err := ovp.New(ctx, cache, cfg.Config)
+	if err != nil {
+		return nil, err
+	}
+	if closer != nil {
+		m.closers = append(m.closers, func() {
+			if err := closer(); err != nil {
+				panic(err)
+			}
+		})
+	}
+	return ov, nil
+}
+
 // Unzip extracts a ZIP file to the specified destination
 func unzip(src, dest string) error {
 	r, err := zip.OpenReader(src)

@@ -20,7 +20,8 @@ import (
 type payload struct {
 	Context struct {
 		Domain  string `json:"domain"`
-		Version string `json:"version"`
+		Version string `json:"version,omitempty"`
+		CoreVersion string `json:"core_version,omitempty"`
 	} `json:"context"`
 }
 
@@ -64,8 +65,13 @@ func (v *schemaValidator) Validate(ctx context.Context, url *url.URL, data []byt
 	if payloadData.Context.Domain == "" {
 		return model.NewBadReqErr(fmt.Errorf("missing field Domain in context"))
 	}
+	if payloadData.Context.Version == "" && payloadData.Context.CoreVersion == "" {
+		return model.NewBadReqErr(fmt.Errorf("missing field Version or CoreVersion in context"))
+	}
 	if payloadData.Context.Version == "" {
-		return model.NewBadReqErr(fmt.Errorf("missing field Version in context"))
+		payloadData.Context.Version = payloadData.Context.CoreVersion
+	}else if payloadData.Context.CoreVersion == "" {
+		payloadData.Context.CoreVersion = payloadData.Context.Version
 	}
 
 	// Extract domain, version, and endpoint from the payload and uri.
@@ -80,7 +86,6 @@ func (v *schemaValidator) Validate(ctx context.Context, url *url.URL, data []byt
 
 	// Construct the schema file name.
 	schemaFileName := fmt.Sprintf("%s_%s_%s", domain, version, endpoint)
-
 	// Retrieve the schema from the cache.
 	schema, exists := v.schemaCache[schemaFileName]
 	if !exists {

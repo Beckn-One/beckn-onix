@@ -27,6 +27,7 @@ type stdHandler struct {
 	router           definition.Router
 	publisher        definition.Publisher
 	transportWrapper definition.TransportWrapper
+	ondcValidator    definition.OndcValidator
 	SubscriberID     string
 	role             model.Role
 	httpClient       *http.Client
@@ -224,6 +225,25 @@ func loadKeyManager(ctx context.Context, mgr PluginManager, cache definition.Cac
 	return km, nil
 }
 
+// loadOndcValidator loads the OndcValidator plugin using the provided PluginManager and cache.
+func loadOndcValidator(ctx context.Context, mgr PluginManager, cache definition.Cache, cfg *plugin.Config) (definition.OndcValidator, error) {
+	if cfg == nil {
+		log.Debug(ctx, "Skipping OndcValidator plugin: not configured")
+		return nil, nil
+	}
+	if cache == nil {
+		return nil, fmt.Errorf("failed to load OndcValidator plugin (%s): Cache plugin not configured", cfg.ID)
+	}
+	ov, err := mgr.OndcValidator(ctx, cache, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load OndcValidator plugin (%s): %w", cfg.ID, err)
+	}
+
+	log.Debugf(ctx, "Loaded OndcValidator plugin: %s", cfg.ID)
+	return ov, nil
+}
+
+
 // initPlugins initializes required plugins for the processor.
 func (h *stdHandler) initPlugins(ctx context.Context, mgr PluginManager, cfg *PluginCfg) error {
 	var err error
@@ -252,6 +272,9 @@ func (h *stdHandler) initPlugins(ctx context.Context, mgr PluginManager, cfg *Pl
 		return err
 	}
 	if h.transportWrapper, err = loadPlugin(ctx, "TransportWrapper", cfg.TransportWrapper, mgr.TransportWrapper); err != nil {
+		return err
+	}
+	if h.ondcValidator,err = loadOndcValidator(ctx, mgr, h.cache, cfg.OndcValidator); err != nil {
 		return err
 	}
 
@@ -286,6 +309,10 @@ func (h *stdHandler) initSteps(ctx context.Context, mgr PluginManager, cfg *Conf
 			s, err = newValidateSchemaStep(h.schemaValidator)
 		case "addRoute":
 			s, err = newAddRouteStep(h.router)
+		case "validateOndcPayload":
+			s, err = newValidateOndcStep(h.ondcValidator)
+		case "validateOndcCallSave":
+			s, err = newValidateOndcCallSaveStep(h.ondcValidator)
 		default:
 			if customStep, exists := steps[step]; exists {
 				s = customStep

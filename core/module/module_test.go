@@ -79,6 +79,11 @@ func (m *mockPluginManager) SchemaValidator(ctx context.Context, cfg *plugin.Con
 	return nil, nil
 }
 
+// OndcValidator returns a mock ONDC validator implementation.
+func (m *mockPluginManager) OndcValidator(ctx context.Context, cache definition.Cache, cfg *plugin.Config) (definition.OndcValidator, error) {
+	return nil, nil
+}
+
 // TestRegisterSuccess tests scenarios where the handler registration should succeed.
 func TestRegisterSuccess(t *testing.T) {
 	mCfgs := []Config{

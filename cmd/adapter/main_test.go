@@ -78,6 +78,16 @@ func (m *MockPluginManager) SchemaValidator(ctx context.Context, cfg *plugin.Con
 	return nil, nil
 }
 
+// TransportWrapper returns a mock implementation of the TransportWrapper interface.
+func (m *MockPluginManager) TransportWrapper(ctx context.Context, cfg *plugin.Config) (definition.TransportWrapper, error) {
+	return nil, nil
+}
+
+// OndcValidator returns a mock implementation of the OndcValidator interface.
+func (m *MockPluginManager) OndcValidator(ctx context.Context, cache definition.Cache, cfg *plugin.Config) (definition.OndcValidator, error) {
+	return nil, nil
+}
+
 // mockRun is a mock implementation of the `run` function, simulating a successful run.
 func mockRun(ctx context.Context, configPath string) error {
 	return nil // Simulate a successful run
