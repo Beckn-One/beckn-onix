@@ -67,4 +67,4 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
-replace github.com/beckn-one/beckn-onix => github.com/extedcoud/beckn-onix v1.3.0
+replace github.com/beckn-one/beckn-onix => github.com/extedcoud/beckn-onix v0.0.0-20241015000000-000000000000
