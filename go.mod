@@ -1,4 +1,4 @@
-module github.com/beckn-one/beckn-onix
+module github.com/extedcoud/beckn-onix
 
 go 1.24.0
 
@@ -66,3 +66,5 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v2 v2.4.0
 )
+
+replace github.com/beckn-one/beckn-onix => github.com/extedcoud/beckn-onix v1.3.0
