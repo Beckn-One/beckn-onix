@@ -34,6 +34,10 @@ modules:
         idleConnTimeout: 300s
         responseHeaderTimeout: 5s
       plugins:
+        cache:
+          id: cache
+          config:
+            addr: localhost:6379
         schemaValidator:
           id: schemavalidator
           config:
@@ -41,9 +45,9 @@ modules:
         ondcValidator:
           id: ondcvalidator
           config:
-            stateFullValidations: true
-            debugMode: true
+            stateFullValidations: false
+            debugMode: false
       steps:
         - validateSchema
         - validateOndcPayload
-        - validateOndcCallSave
+        # - validateOndcCallSave

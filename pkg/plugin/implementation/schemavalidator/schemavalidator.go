@@ -56,6 +56,7 @@ func New(ctx context.Context, config *Config) (*schemaValidator, func() error, e
 
 // Validate validates the given data against the schema.
 func (v *schemaValidator) Validate(ctx context.Context, url *url.URL, data []byte) error {
+	fmt.Println("Validating schema...")
 	var payloadData payload
 	err := json.Unmarshal(data, &payloadData)
 	if err != nil {
@@ -80,7 +81,7 @@ func (v *schemaValidator) Validate(ctx context.Context, url *url.URL, data []byt
 	version = fmt.Sprintf("v%s", version)
 
 	endpoint := path.Base(url.String())
-	log.Debugf(ctx, "Handling request for endpoint: %s", endpoint)
+	log.Debugf(ctx, "Handling request for endpoint for schema: %s", endpoint)
 	domain := strings.ToLower(cxtDomain)
 	domain = strings.ReplaceAll(domain, ":", "_")
 

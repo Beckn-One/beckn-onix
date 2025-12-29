@@ -6,6 +6,7 @@ import (
 
 	"github.com/beckn-one/beckn-onix/pkg/plugin/definition"
 	"github.com/beckn-one/beckn-onix/pkg/plugin/implementation/schemavalidator"
+	"github.com/extedcoud/beckn-onix/pkg/log"
 )
 
 // schemaValidatorProvider provides instances of schemaValidator.
@@ -13,6 +14,7 @@ type schemaValidatorProvider struct{}
 
 // New initializes a new Verifier instance.
 func (vp schemaValidatorProvider) New(ctx context.Context, config map[string]string) (definition.SchemaValidator, func() error, error) {
+	log.Debug(ctx,"Creating New SchemaValidator plugin instance")
 	if ctx == nil {
 		return nil, nil, errors.New("context cannot be nil")
 	}

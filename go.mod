@@ -3,7 +3,6 @@ module github.com/extedcoud/beckn-onix
 go 1.24.0
 
 require (
-	github.com/rogpeppe/go-internal v1.13.1 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
 	golang.org/x/crypto v0.36.0
 )
@@ -29,7 +28,6 @@ require (
 	github.com/go-jose/go-jose/v4 v4.0.1 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
@@ -55,6 +53,7 @@ require (
 )
 
 require (
+	github.com/beckn-one/beckn-onix v0.0.0-00010101000000-000000000000
 	github.com/getkin/kin-openapi v0.133.0
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-retryablehttp v0.7.7
@@ -67,4 +66,5 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
-replace github.com/beckn-one/beckn-onix => github.com/extedcoud/beckn-onix v0.0.0-20241015000000-000000000000
+// replace github.com/beckn-one/beckn-onix => github.com/extedcoud/beckn-onix v0.0.0-20251224081251-0130499ddf85
+replace github.com/beckn-one/beckn-onix => ./

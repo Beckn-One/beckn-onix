@@ -183,6 +183,7 @@ type validateOndcStep struct {
 
 // Run executes the ONDC validation step.
 func (s *validateOndcStep) Run(ctx *model.StepContext) error {
+	log.Debug(ctx,"Executing ONDC validation step")
 	if err := s.validator.ValidatePayload(ctx, ctx.Request.URL, ctx.Body); err != nil {
 		return fmt.Errorf("ondc validation failed: %w", err)
 	}
@@ -223,6 +224,7 @@ func newValidateOndcCallSaveStep(ondcValidator definition.OndcValidator) (defini
 
 // Run executes the schema validation step.
 func (s *validateSchemaStep) Run(ctx *model.StepContext) error {
+	fmt.Println("Running schema validation step")
 	if err := s.validator.Validate(ctx, ctx.Request.URL, ctx.Body); err != nil {
 		return fmt.Errorf("schema validation failed: %w", err)
 	}
