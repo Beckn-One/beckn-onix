@@ -1,4 +1,6 @@
-gen schema: npx ondc-code-generator schema -c ./config/ondc-workbench-onix/ondc.yaml -o ./schemas/ondc_ret10/v1.2.0 -f json
+gen schema:
+npx ondc-code-generator schema -c ./config/ondc-workbench-onix/ondc.yaml -o ./schemas/ondc_ret10/v1.2.0 -f json
+go build -buildmode=plugin -o ondcvalidator.so ./cmd/plugin.go
 
 gen ondcValidations:
 npx ondc-code-generator xval -c ./config/ondc-workbench-onix/ondc.yaml -o ./pkg/plugin/implementation/ondcValidator/ -l golang

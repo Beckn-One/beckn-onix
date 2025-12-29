@@ -231,9 +231,6 @@ func loadOndcValidator(ctx context.Context, mgr PluginManager, cache definition.
 		log.Debug(ctx, "Skipping OndcValidator plugin: not configured")
 		return nil, nil
 	}
-	if cache == nil {
-		return nil, fmt.Errorf("failed to load OndcValidator plugin (%s): Cache plugin not configured", cfg.ID)
-	}
 	ov, err := mgr.OndcValidator(ctx, cache, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load OndcValidator plugin (%s): %w", cfg.ID, err)
