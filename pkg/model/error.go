@@ -11,6 +11,7 @@ type Error struct {
 	Code    string `json:"code"`
 	Paths   string `json:"paths,omitempty"`
 	Message string `json:"message"`
+	Context any    `json:"context,omitempty"`
 }
 
 // This implements the error interface for the Error struct.
@@ -109,5 +110,52 @@ func (e *NotFoundErr) BecknError() *Error {
 	return &Error{
 		Code:    http.StatusText(http.StatusNotFound),
 		Message: "Endpoint not found: " + e.Error(),
+	}
+}
+
+type workbenchErr struct {
+	Err Error
+	Behavior string // e.g. NACK, INTERNAL, 
+}
+
+func (e *workbenchErr) Error() string {
+	return e.Err.Message
+}
+
+func (e *workbenchErr) BecknError() *Error {
+	return &Error{
+		Code:    e.Err.Code,
+		Message: e.Err.Message,
+		Context: e.Err.Context,
+	}
+}
+
+/* NewWorkbenchErr creates a new instance of workbenchErr.
+valid errType values: BAD_REQUEST, UNAUTHORIZED, NOT_FOUND, INTERNAL
+valid behavior values: NACK or LOG or HTTP
+*/
+func NewWorkbenchErr(errType, message, behavior string,context any) *workbenchErr {
+	return &workbenchErr{
+		Err: Error{
+			Code:    codeFromType(errType),
+			Message: message,
+			Context: context,
+		},
+		Behavior: behavior,
+	}
+}
+
+func codeFromType(errType string) string {
+	switch errType {
+	case "BAD_REQUEST":
+		return http.StatusText(http.StatusBadRequest)
+	case "UNAUTHORIZED":
+		return http.StatusText(http.StatusUnauthorized)
+	case "NOT_FOUND":
+		return http.StatusText(http.StatusNotFound)
+	case "INTERNAL":
+		return http.StatusText(http.StatusInternalServerError)
+	default:
+		return "0"
 	}
 }

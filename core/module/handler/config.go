@@ -25,6 +25,7 @@ type PluginManager interface {
 	TransportWrapper(ctx context.Context, cfg *plugin.Config) (definition.TransportWrapper, error)
 	SchemaValidator(ctx context.Context, cfg *plugin.Config) (definition.SchemaValidator, error)
 	OndcValidator(ctx context.Context, cache definition.Cache, cfg *plugin.Config) (definition.OndcValidator, error)
+	OndcWorkbench(ctx context.Context, cache definition.Cache, keyManager definition.KeyManager, cfg *plugin.Config) (definition.OndcWorkbench, error)
 }
 
 // Type defines different handler types for processing requests.
@@ -48,6 +49,7 @@ type PluginCfg struct {
 	TransportWrapper *plugin.Config  `yaml:"transportWrapper,omitempty"`
 	Middleware       []plugin.Config `yaml:"middleware,omitempty"`
 	OndcValidator    *plugin.Config  `yaml:"ondcValidator,omitempty"`
+	OndcWorkbench    *plugin.Config  `yaml:"ondcWorkbench,omitempty"`
 	Steps            []plugin.Config
 }
 

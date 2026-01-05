@@ -10,3 +10,4 @@ TODOS:
 1. create unit tests
 2. update documentation
 3. api service
+4. logger to loki

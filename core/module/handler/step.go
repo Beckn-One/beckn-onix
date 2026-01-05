@@ -183,6 +183,11 @@ type validateOndcStep struct {
 
 // Run executes the ONDC validation step.
 func (s *validateOndcStep) Run(ctx *model.StepContext) error {
+	skipCookie := ctx.Request.Header.Get("Skip-ONDC-Validation")
+	if(skipCookie == "true"){
+		log.Debug(ctx,"Skipping ONDC validation step as per Skip-ONDC-Validation header")
+		return nil
+	}
 	log.Debug(ctx,"Executing ONDC validation step")
 	if err := s.validator.ValidatePayload(ctx, ctx.Request.URL, ctx.Body); err != nil {
 		return fmt.Errorf("ondc validation failed: %w", err)
@@ -246,6 +251,7 @@ func newAddRouteStep(router definition.Router) (definition.Step, error) {
 
 // Run executes the routing step.
 func (s *addRouteStep) Run(ctx *model.StepContext) error {
+
 	route, err := s.router.Route(ctx, ctx.Request.URL, ctx.Body)
 	if err != nil {
 		return fmt.Errorf("failed to determine route: %w", err)
@@ -254,6 +260,48 @@ func (s *addRouteStep) Run(ctx *model.StepContext) error {
 		TargetType:  route.TargetType,
 		PublisherID: route.PublisherID,
 		URL:         route.URL,
+	}
+	return nil
+}
+
+type workbenchReceiveStep struct {
+	workbench definition.OndcWorkbench
+}
+
+// newWorkbenchReceiveStep creates and returns the workbench receive step after validation.
+func newWorkbenchReceiveStep(workbench definition.OndcWorkbench) (definition.Step, error) {
+	if workbench == nil {
+		return nil, fmt.Errorf("invalid config: OndcWorkbench plugin not configured")
+	}
+	log.Debug(context.Background(), "adding ondc workbench receive step")
+	return &workbenchReceiveStep{workbench: workbench}, nil
+}
+
+// Run executes the workbench receive step.
+func (s *workbenchReceiveStep) Run(ctx *model.StepContext) error {
+	if err := s.workbench.WorkbenchReceiver(ctx,ctx.Request,ctx.Body); err != nil {
+		return fmt.Errorf("ondc workbench receive step failed: %w", err)
+	}
+	return nil
+}
+
+type workbenchProcessStep struct {
+	workbench definition.OndcWorkbench
+}
+
+// newWorkbenchProcessStep creates and returns the workbench process step after validation.
+func newWorkbenchProcessStep(workbench definition.OndcWorkbench) (definition.Step, error) {
+	if workbench == nil {
+		return nil, fmt.Errorf("invalid config: OndcWorkbench plugin not configured")
+	}
+	log.Debug(context.Background(), "adding ondc workbench process step")
+	return &workbenchProcessStep{workbench: workbench}, nil
+}
+
+// Run executes the workbench process step.
+func (s *workbenchProcessStep) Run(ctx *model.StepContext) error {
+	if err := s.workbench.WorkbenchProcessor(ctx,ctx.Request,ctx.Body); err != nil {
+		return fmt.Errorf("ondc workbench process step failed: %w", err)
 	}
 	return nil
 }

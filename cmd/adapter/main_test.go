@@ -88,6 +88,11 @@ func (m *MockPluginManager) OndcValidator(ctx context.Context, cache definition.
 	return nil, nil
 }
 
+// OndcWorkbench returns a mock implementation of the OndcWorkbench interface.
+func (m *MockPluginManager) OndcWorkbench(ctx context.Context, cache definition.Cache, keyManager definition.KeyManager, cfg *plugin.Config) (definition.OndcWorkbench, error) {
+	return nil, nil
+}
+
 // mockRun is a mock implementation of the `run` function, simulating a successful run.
 func mockRun(ctx context.Context, configPath string) error {
 	return nil // Simulate a successful run

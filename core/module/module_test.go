@@ -84,6 +84,11 @@ func (m *mockPluginManager) OndcValidator(ctx context.Context, cache definition.
 	return nil, nil
 }
 
+// OndcWorkbench returns a mock ONDC workbench implementation.
+func (m *mockPluginManager) OndcWorkbench(ctx context.Context, cache definition.Cache, keyManager definition.KeyManager, cfg *plugin.Config) (definition.OndcWorkbench, error) {
+	return nil, nil
+}
+
 // TestRegisterSuccess tests scenarios where the handler registration should succeed.
 func TestRegisterSuccess(t *testing.T) {
 	mCfgs := []Config{

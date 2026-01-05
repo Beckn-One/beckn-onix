@@ -28,6 +28,7 @@ type stdHandler struct {
 	publisher        definition.Publisher
 	transportWrapper definition.TransportWrapper
 	ondcValidator    definition.OndcValidator
+	ondcWorkbench    definition.OndcWorkbench
 	SubscriberID     string
 	role             model.Role
 	httpClient       *http.Client
@@ -213,9 +214,7 @@ func loadKeyManager(ctx context.Context, mgr PluginManager, cache definition.Cac
 	if cache == nil {
 		return nil, fmt.Errorf("failed to load KeyManager plugin (%s): Cache plugin not configured", cfg.ID)
 	}
-	if registry == nil {
-		return nil, fmt.Errorf("failed to load KeyManager plugin (%s): Registry plugin not configured", cfg.ID)
-	}
+	
 	km, err := mgr.KeyManager(ctx, cache, registry, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load KeyManager plugin (%s): %w", cfg.ID, err)
@@ -238,6 +237,21 @@ func loadOndcValidator(ctx context.Context, mgr PluginManager, cache definition.
 
 	log.Debugf(ctx, "Loaded OndcValidator plugin: %s", cfg.ID)
 	return ov, nil
+}
+
+// loadOndcWorkbench loads the OndcWorkbench plugin using the provided PluginManager and cache.
+func loadOndcWorkbench(ctx context.Context, mgr PluginManager, cache definition.Cache,keyMgr definition.KeyManager, cfg *plugin.Config) (definition.OndcWorkbench, error) {
+	if cfg == nil {
+		log.Debug(ctx, "Skipping OndcWorkbench plugin: not configured")
+		return nil, nil
+	}
+	ow, err := mgr.OndcWorkbench(ctx, cache, keyMgr, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load OndcWorkbench plugin (%s): %w", cfg.ID, err)
+	}
+
+	log.Debugf(ctx, "Loaded OndcWorkbench plugin: %s", cfg.ID)
+	return ow, nil
 }
 
 
@@ -272,6 +286,9 @@ func (h *stdHandler) initPlugins(ctx context.Context, mgr PluginManager, cfg *Pl
 		return err
 	}
 	if h.ondcValidator,err = loadOndcValidator(ctx, mgr, h.cache, cfg.OndcValidator); err != nil {
+		return err
+	}
+	if h.ondcWorkbench,err = loadOndcWorkbench(ctx, mgr, h.cache, h.km, cfg.OndcWorkbench); err != nil {
 		return err
 	}
 
@@ -310,6 +327,10 @@ func (h *stdHandler) initSteps(ctx context.Context, mgr PluginManager, cfg *Conf
 			s, err = newValidateOndcStep(h.ondcValidator)
 		case "validateOndcCallSave":
 			s, err = newValidateOndcCallSaveStep(h.ondcValidator)
+		case "ondcWorkbenchReceiver":
+			s, err = newWorkbenchReceiveStep(h.ondcWorkbench)
+		case "ondcWorkbenchProcessor":
+			s, err = newWorkbenchProcessStep(h.ondcWorkbench)
 		default:
 			if customStep, exists := steps[step]; exists {
 				s = customStep
