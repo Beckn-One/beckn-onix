@@ -50,7 +50,7 @@ modules:
             stateFullValidations: true
             debugMode: false
         ondcWorkbench:
-          id: ondcworkbench
+          id: workbench
           config:
             auditURL: http://13.233.69.163:8080
             # noUrl: https:no.url

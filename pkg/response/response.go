@@ -42,6 +42,10 @@ func nack(ctx context.Context, w http.ResponseWriter, err *model.Error, status i
 			Error: err,
 		},
 	}
+	if(err.Context != nil){
+		resp.Context = ctx
+	}
+
 	data, _ := json.Marshal(resp) //should not fail here
 
 	w.Header().Set("Content-Type", "application/json")
@@ -68,8 +72,19 @@ func SendNack(ctx context.Context, w http.ResponseWriter, err error) {
 	var signErr *model.SignValidationErr
 	var badReqErr *model.BadReqErr
 	var notFoundErr *model.NotFoundErr
+	var workbenchErr *model.WorkbenchErr
 
 	switch {
+	case errors.As(err, &workbenchErr):
+		behavior := workbenchErr.Behavior
+		switch behavior {
+		case "NACK":
+			nack(ctx, w, workbenchErr.BecknError(), 200)
+			return
+		case "HTTP":
+			nack(ctx, w, workbenchErr.BecknError(), http.StatusPreconditionFailed)
+			return
+		}
 	case errors.As(err, &schemaErr):
 		nack(ctx, w, schemaErr.BecknError(), http.StatusBadRequest)
 		return

@@ -183,5 +183,6 @@ type Message struct {
 
 // Response represents the main response structure.
 type Response struct {
+	Context  context.Context `json:"context,omitempty"`
 	Message Message `json:"message"`
 }

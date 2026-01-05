@@ -113,16 +113,17 @@ func (e *NotFoundErr) BecknError() *Error {
 	}
 }
 
-type workbenchErr struct {
+// WorkbenchErr represents an error occurring in the workbench processing.
+type WorkbenchErr struct {
 	Err Error
 	Behavior string // e.g. NACK, INTERNAL, 
 }
 
-func (e *workbenchErr) Error() string {
+func (e *WorkbenchErr) Error() string {
 	return e.Err.Message
 }
 
-func (e *workbenchErr) BecknError() *Error {
+func (e *WorkbenchErr) BecknError() *Error {
 	return &Error{
 		Code:    e.Err.Code,
 		Message: e.Err.Message,
@@ -134,8 +135,8 @@ func (e *workbenchErr) BecknError() *Error {
 valid errType values: BAD_REQUEST, UNAUTHORIZED, NOT_FOUND, INTERNAL
 valid behavior values: NACK or LOG or HTTP
 */
-func NewWorkbenchErr(errType, message, behavior string,context any) *workbenchErr {
-	return &workbenchErr{
+func NewWorkbenchErr(errType, message, behavior string,context any) *WorkbenchErr {
+	return &WorkbenchErr{
 		Err: Error{
 			Code:    codeFromType(errType),
 			Message: message,
@@ -155,7 +156,9 @@ func codeFromType(errType string) string {
 		return http.StatusText(http.StatusNotFound)
 	case "INTERNAL":
 		return http.StatusText(http.StatusInternalServerError)
+	case "PRECONDITION_FAILED":
+		return http.StatusText(http.StatusPreconditionFailed)
 	default:
-		return "0"
+		return http.StatusText(http.StatusInternalServerError)
 	}
 }
