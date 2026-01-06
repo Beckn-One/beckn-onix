@@ -62,12 +62,11 @@ modules:
             moduleRole: "BAP"
             moduleType: "receiver"
             configServiceURL: https://dev-automation.ondc.org/config-service
-
       steps:
         - ondcWorkbenchReceiver
         - validateSchema
         - validateOndcPayload
-        # - ondcWorkbenchProcessor
+        - ondcWorkbenchValidateContext
         - validateOndcCallSave
         # - addRoute
   # - name: BapTxnCaller

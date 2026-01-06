@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/beckn-one/beckn-onix/pkg/log"
 	"github.com/beckn-one/beckn-onix/pkg/model"
@@ -34,16 +35,23 @@ func SendAck(w http.ResponseWriter) {
 
 // nack sends a negative acknowledgment (NACK) response with an error message.
 func nack(ctx context.Context, w http.ResponseWriter, err *model.Error, status int) {
+	log.Infof(ctx,"Sending Nack: code %s, message %s", err.Code, err.Message)
 	resp := &model.Response{
 		Message: model.Message{
 			Ack: model.Ack{
 				Status: model.StatusNACK,
 			},
-			Error: err,
+			Error: &model.Error{
+				Code:    err.Code,
+				Message: err.Message,
+			},
 		},
 	}
 	if(err.Context != nil){
-		resp.Context = ctx
+		resp.Context = err.Context
+	}
+	if(err.Code == "500"){
+		resp.Message.Error.Message = "INTERNAL_SERVER_ERROR"
 	}
 
 	data, _ := json.Marshal(resp) //should not fail here
@@ -74,6 +82,8 @@ func SendNack(ctx context.Context, w http.ResponseWriter, err error) {
 	var notFoundErr *model.NotFoundErr
 	var workbenchErr *model.WorkbenchErr
 
+	log.Errorf(ctx,err,"Responding Error")
+
 	switch {
 	case errors.As(err, &workbenchErr):
 		behavior := workbenchErr.Behavior
@@ -82,11 +92,12 @@ func SendNack(ctx context.Context, w http.ResponseWriter, err error) {
 			nack(ctx, w, workbenchErr.BecknError(), 200)
 			return
 		case "HTTP":
-			nack(ctx, w, workbenchErr.BecknError(), http.StatusPreconditionFailed)
+			code, _ := strconv.Atoi(workbenchErr.Err.Code)
+			nack(ctx, w, workbenchErr.BecknError(), code)
 			return
 		}
 	case errors.As(err, &schemaErr):
-		nack(ctx, w, schemaErr.BecknError(), http.StatusBadRequest)
+		nack(ctx, w, schemaErr.BecknError(), 200)
 		return
 	case errors.As(err, &signErr):
 		nack(ctx, w, signErr.BecknError(), http.StatusUnauthorized)

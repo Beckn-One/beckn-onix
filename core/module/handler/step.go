@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -83,6 +84,15 @@ func newValidateSignStep(signValidator definition.SignValidator, km definition.K
 
 // Run executes the validation step.
 func (s *validateSignStep) Run(ctx *model.StepContext) error {
+	headerValCookie , err := ctx.Request.Cookie("header_validation")
+	if err != nil {
+		headerValCookie = &http.Cookie{Value: "true"}
+	}
+	log.Debugf(ctx,"Executing Signature validation step with header_validation cookie value: %s", headerValCookie.Value)
+	if(headerValCookie.Value == "false"){
+		log.Debug(ctx,"Skipping Signature validation step as per header_validation cookie")
+		return nil
+	}
 	unauthHeader := fmt.Sprintf("Signature realm=\"%s\",headers=\"(created) (expires) digest\"", ctx.SubID)
 	headerValue := ctx.Request.Header.Get(model.AuthHeaderGateway)
 	if len(headerValue) != 0 {
@@ -183,12 +193,15 @@ type validateOndcStep struct {
 
 // Run executes the ONDC validation step.
 func (s *validateOndcStep) Run(ctx *model.StepContext) error {
-	skipCookie := ctx.Request.Header.Get("Skip-ONDC-Validation")
-	if(skipCookie == "true"){
-		log.Debug(ctx,"Skipping ONDC validation step as per Skip-ONDC-Validation header")
+	skipCookie, err := ctx.Request.Cookie("protocol_validation")
+	if err != nil {
+		skipCookie = &http.Cookie{Value: "true"}
+	}
+	log.Debugf(ctx,"Executing ONDC validation step with protocol_validation header value: %s", skipCookie.Value)
+	if(skipCookie.Value == "false"){
+		log.Debug(ctx,"Skipping ONDC validation step as per protocol_validation cookie")
 		return nil
 	}
-	log.Debug(ctx,"Executing ONDC validation step")
 	if err := s.validator.ValidatePayload(ctx, ctx.Request.URL, ctx.Body); err != nil {
 		return fmt.Errorf("ondc validation failed: %w", err)
 	}
@@ -285,23 +298,23 @@ func (s *workbenchReceiveStep) Run(ctx *model.StepContext) error {
 	return nil
 }
 
-type workbenchProcessStep struct {
+type workbenchValidateContextStep struct {
 	workbench definition.OndcWorkbench
 }
 
-// newWorkbenchProcessStep creates and returns the workbench process step after validation.
-func newWorkbenchProcessStep(workbench definition.OndcWorkbench) (definition.Step, error) {
+// newWorkbenchValidateContextStep creates and returns the workbench validate context step after validation.
+func newWorkbenchValidateContextStep(workbench definition.OndcWorkbench) (definition.Step, error) {
 	if workbench == nil {
 		return nil, fmt.Errorf("invalid config: OndcWorkbench plugin not configured")
 	}
 	log.Debug(context.Background(), "adding ondc workbench process step")
-	return &workbenchProcessStep{workbench: workbench}, nil
+	return &workbenchValidateContextStep{workbench: workbench}, nil
 }
 
 // Run executes the workbench process step.
-func (s *workbenchProcessStep) Run(ctx *model.StepContext) error {
-	if err := s.workbench.WorkbenchProcessor(ctx,ctx.Request,ctx.Body); err != nil {
-		return fmt.Errorf("ondc workbench process step failed: %w", err)
+func (s *workbenchValidateContextStep) Run(ctx *model.StepContext) error {
+	if err := s.workbench.WorkbenchValidateContext(ctx,ctx.Request,ctx.Body); err != nil {
+		return fmt.Errorf("ondc workbench context validation step failed: %w", err)
 	}
 	return nil
 }

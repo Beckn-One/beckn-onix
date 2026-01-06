@@ -451,12 +451,12 @@ func (m *Manager) OndcValidator(ctx context.Context,cache definition.Cache, cfg 
 }
 
 // OndcWorkbench returns an OndcWorkbench instance based on the provided configuration.
-func (m *Manager) OndcWorkbench(ctx context.Context,cache definition.Cache,keyManager definition.KeyManager, cfg *Config) (definition.OndcWorkbench, error) {
+func (m *Manager) OndcWorkbench(ctx context.Context,cache definition.Cache,cfg *Config) (definition.OndcWorkbench, error) {
 	owp, err := provider[definition.OndcWorkbenchProvider](m.plugins, cfg.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load provider for %s: %w", cfg.ID, err)
 	}
-	ow, closer, err := owp.New(ctx, cache,keyManager, cfg.Config)
+	ow, closer, err := owp.New(ctx, cache, cfg.Config)
 	if err != nil {
 		return nil, err
 	}

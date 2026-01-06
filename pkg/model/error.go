@@ -3,6 +3,7 @@ package model
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -138,7 +139,7 @@ valid behavior values: NACK or LOG or HTTP
 func NewWorkbenchErr(errType, message, behavior string,context any) *WorkbenchErr {
 	return &WorkbenchErr{
 		Err: Error{
-			Code:    codeFromType(errType),
+			Code:    strconv.Itoa(codeFromType(errType)),
 			Message: message,
 			Context: context,
 		},
@@ -146,19 +147,19 @@ func NewWorkbenchErr(errType, message, behavior string,context any) *WorkbenchEr
 	}
 }
 
-func codeFromType(errType string) string {
+func codeFromType(errType string) int {
 	switch errType {
 	case "BAD_REQUEST":
-		return http.StatusText(http.StatusBadRequest)
+		return http.StatusBadRequest
 	case "UNAUTHORIZED":
-		return http.StatusText(http.StatusUnauthorized)
+		return http.StatusUnauthorized
 	case "NOT_FOUND":
-		return http.StatusText(http.StatusNotFound)
+		return http.StatusNotFound
 	case "INTERNAL":
-		return http.StatusText(http.StatusInternalServerError)
+		return http.StatusInternalServerError
 	case "PRECONDITION_FAILED":
-		return http.StatusText(http.StatusPreconditionFailed)
+		return http.StatusPreconditionFailed
 	default:
-		return http.StatusText(http.StatusInternalServerError)
+		return http.StatusInternalServerError
 	}
 }
