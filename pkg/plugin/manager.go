@@ -15,6 +15,7 @@ import (
 
 	"github.com/beckn-one/beckn-onix/pkg/log"
 	"github.com/beckn-one/beckn-onix/pkg/plugin/definition"
+	"github.com/beckn-one/beckn-onix/pkg/telemetry"
 )
 
 type onixPlugin interface {
@@ -194,6 +195,33 @@ func (m *Manager) Middleware(ctx context.Context, cfg *Config) (func(http.Handle
 		return nil, fmt.Errorf("failed to load provider for %s: %w", cfg.ID, err)
 	}
 	return mwp.New(ctx, cfg.Config)
+}
+
+// OtelSetup initializes OpenTelemetry via a dedicated plugin. The plugin is
+// expected to return a telemetry Provider that the core application can use for
+// instrumentation.
+func (m *Manager) OtelSetup(ctx context.Context, cfg *Config) (*telemetry.Provider, error) {
+	if cfg == nil {
+		log.Info(ctx, "Telemetry config not provided; skipping OpenTelemetry setup")
+		return nil, nil
+	}
+
+	otp, err := provider[definition.OtelSetupMetricsProvider](m.plugins, cfg.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load provider for %s: %w", cfg.ID, err)
+	}
+	provider, closer, err := otp.New(ctx, cfg.Config)
+	if err != nil {
+		return nil, err
+	}
+	if closer != nil {
+		m.closers = append(m.closers, func() {
+			if err := closer(); err != nil {
+				log.Errorf(context.Background(), err, "Failed to shutdown telemetry provider")
+			}
+		})
+	}
+	return provider, nil
 }
 
 // TransportWrapper returns a TransportWrapper instance based on the provided configuration.

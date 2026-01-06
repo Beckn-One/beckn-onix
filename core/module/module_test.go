@@ -138,6 +138,7 @@ func TestRegisterSuccess(t *testing.T) {
 	if capturedModuleName != "test-module" {
 		t.Errorf("expected module_id in context to be 'test-module', got %v", capturedModuleName)
 	}
+
 	// Verifying /health endpoint registration
 	reqHealth := httptest.NewRequest(http.MethodGet, "/health", nil)
 	recHealth := httptest.NewRecorder()

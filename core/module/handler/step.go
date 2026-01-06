@@ -2,14 +2,18 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
+	"go.opentelemetry.io/otel/metric"
+
 	"github.com/beckn-one/beckn-onix/pkg/log"
 	"github.com/beckn-one/beckn-onix/pkg/model"
 	"github.com/beckn-one/beckn-onix/pkg/plugin/definition"
+	"github.com/beckn-one/beckn-onix/pkg/telemetry"
 )
 
 // signStep represents the signing step in the processing pipeline.
@@ -69,6 +73,7 @@ func (s *signStep) generateAuthHeader(subID, keyID string, createdAt, validTill 
 type validateSignStep struct {
 	validator definition.SignValidator
 	km        definition.KeyManager
+	metrics   *HandlerMetrics
 }
 
 // newValidateSignStep initializes and returns a new validate sign step.
@@ -79,16 +84,26 @@ func newValidateSignStep(signValidator definition.SignValidator, km definition.K
 	if km == nil {
 		return nil, fmt.Errorf("invalid config: KeyManager plugin not configured")
 	}
-	return &validateSignStep{validator: signValidator, km: km}, nil
+	metrics, _ := GetHandlerMetrics(context.Background())
+	return &validateSignStep{
+		validator: signValidator,
+		km:        km,
+		metrics:   metrics,
+	}, nil
 }
 
 // Run executes the validation step.
 func (s *validateSignStep) Run(ctx *model.StepContext) error {
+	err := s.validateHeaders(ctx)
+	s.recordMetrics(ctx, err)
+	return err
+}
+
+func (s *validateSignStep) validateHeaders(ctx *model.StepContext) error {
 	headerValCookie , err := ctx.Request.Cookie("header_validation")
 	if err != nil {
 		headerValCookie = &http.Cookie{Value: "true"}
 	}
-	log.Debugf(ctx,"Executing Signature validation step with header_validation cookie value: %s", headerValCookie.Value)
 	if(headerValCookie.Value == "false"){
 		log.Debug(ctx,"Skipping Signature validation step as per header_validation cookie")
 		return nil
@@ -101,17 +116,6 @@ func (s *validateSignStep) Run(ctx *model.StepContext) error {
 			ctx.RespHeader.Set(model.UnaAuthorizedHeaderGateway, unauthHeader)
 			return model.NewSignValidationErr(fmt.Errorf("failed to validate %s: %w", model.AuthHeaderGateway, err))
 		}
-	}
-
-	log.Debugf(ctx, "Validating %v Header", model.AuthHeaderSubscriber)
-	headerValue = ctx.Request.Header.Get(model.AuthHeaderSubscriber)
-	if len(headerValue) == 0 {
-		ctx.RespHeader.Set(model.UnaAuthorizedHeaderSubscriber, unauthHeader)
-		return model.NewSignValidationErr(fmt.Errorf("%s missing", model.UnaAuthorizedHeaderSubscriber))
-	}
-	if err := s.validate(ctx, headerValue); err != nil {
-		ctx.RespHeader.Set(model.UnaAuthorizedHeaderSubscriber, unauthHeader)
-		return model.NewSignValidationErr(fmt.Errorf("failed to validate %s: %w", model.AuthHeaderSubscriber, err))
 	}
 	return nil
 }
@@ -131,6 +135,18 @@ func (s *validateSignStep) validate(ctx *model.StepContext, value string) error 
 		return fmt.Errorf("sign validation failed: %w", err)
 	}
 	return nil
+}
+
+func (s *validateSignStep) recordMetrics(ctx *model.StepContext, err error) {
+	if s.metrics == nil {
+		return
+	}
+	status := "success"
+	if err != nil {
+		status = "failed"
+	}
+	s.metrics.SignatureValidationsTotal.Add(ctx.Context, 1,
+		metric.WithAttributes(telemetry.AttrStatus.String(status)))
 }
 
 // ParsedKeyID holds the components from the parsed Authorization header's keyId.
@@ -175,6 +191,7 @@ func parseHeader(header string) (*authHeader, error) {
 // validateSchemaStep represents the schema validation step.
 type validateSchemaStep struct {
 	validator definition.SchemaValidator
+	metrics   *HandlerMetrics
 }
 
 // newValidateSchemaStep creates and returns the validateSchema step after validation.
@@ -183,13 +200,99 @@ func newValidateSchemaStep(schemaValidator definition.SchemaValidator) (definiti
 		return nil, fmt.Errorf("invalid config: SchemaValidator plugin not configured")
 	}
 	log.Debug(context.Background(), "adding schema validator")
-	return &validateSchemaStep{validator: schemaValidator}, nil
+	metrics, _ := GetHandlerMetrics(context.Background())
+	return &validateSchemaStep{
+		validator: schemaValidator,
+		metrics:   metrics,
+	}, nil
 }
 
-// validateOndcStep represents the ONDC validation step.
-type validateOndcStep struct {
-	validator definition.OndcValidator
+
+
+
+// Run executes the schema validation step.
+func (s *validateSchemaStep) Run(ctx *model.StepContext) error {
+	err := s.validator.Validate(ctx, ctx.Request.URL, ctx.Body)
+	if err != nil {
+		err = fmt.Errorf("schema validation failed: %w", err)
+	}
+	s.recordMetrics(ctx, err)
+	return err
 }
+
+func (s *validateSchemaStep) recordMetrics(ctx *model.StepContext, err error) {
+	if s.metrics == nil {
+		return
+	}
+	status := "success"
+	if err != nil {
+		status = "failed"
+	}
+	version := extractSchemaVersion(ctx.Body)
+	s.metrics.SchemaValidationsTotal.Add(ctx.Context, 1,
+		metric.WithAttributes(
+			telemetry.AttrSchemaVersion.String(version),
+			telemetry.AttrStatus.String(status),
+		))
+}
+
+// addRouteStep represents the route determination step.
+type addRouteStep struct {
+	router  definition.Router
+	metrics *HandlerMetrics
+}
+
+// newAddRouteStep creates and returns the addRoute step after validation.
+func newAddRouteStep(router definition.Router) (definition.Step, error) {
+	if router == nil {
+		return nil, fmt.Errorf("invalid config: Router plugin not configured")
+	}
+	metrics, _ := GetHandlerMetrics(context.Background())
+	return &addRouteStep{
+		router:  router,
+		metrics: metrics,
+	}, nil
+}
+
+// Run executes the routing step.
+func (s *addRouteStep) Run(ctx *model.StepContext) error {
+
+	route, err := s.router.Route(ctx, ctx.Request.URL, ctx.Body)
+	if err != nil {
+		return fmt.Errorf("failed to determine route: %w", err)
+	}
+	ctx.Route = &model.Route{
+		TargetType:  route.TargetType,
+		PublisherID: route.PublisherID,
+		URL:         route.URL,
+	}
+	if s.metrics != nil && ctx.Route != nil {
+		s.metrics.RoutingDecisionsTotal.Add(ctx.Context, 1,
+			metric.WithAttributes(
+				telemetry.AttrTargetType.String(ctx.Route.TargetType),
+			))
+	}
+	return nil
+}
+
+func extractSchemaVersion(body []byte) string {
+	type contextEnvelope struct {
+		Context struct {
+			Version string `json:"version"`
+		} `json:"context"`
+	}
+	var payload contextEnvelope
+	if err := json.Unmarshal(body, &payload); err == nil {
+		if payload.Context.Version != "" {
+			return payload.Context.Version
+		}
+	}
+	return "unknown"
+}
+
+// ============================================================================
+// region ONDC VALIDATOR STEPS
+// ============================================================================
 
 // Run executes the ONDC validation step.
 func (s *validateOndcStep) Run(ctx *model.StepContext) error {
@@ -217,6 +320,11 @@ func newValidateOndcStep(ondcValidator definition.OndcValidator) (definition.Ste
 	return &validateOndcStep{validator: ondcValidator}, nil
 }
 
+// validateOndcStep represents the ONDC validation step.
+type validateOndcStep struct {
+	validator definition.OndcValidator
+}
+
 // validateOndcCallSaveStep represents the ONDC call save validation step.
 type validateOndcCallSaveStep struct {
 	validator definition.OndcValidator
@@ -230,7 +338,6 @@ func (s *validateOndcCallSaveStep) Run(ctx *model.StepContext) error {
 	return nil
 }
 
-
 // newValidateOndcCallSaveStep creates and returns the validateOndcCallSave step after validation.
 func newValidateOndcCallSaveStep(ondcValidator definition.OndcValidator) (definition.Step, error) {
 	if ondcValidator == nil {
@@ -239,44 +346,14 @@ func newValidateOndcCallSaveStep(ondcValidator definition.OndcValidator) (defini
 	log.Debug(context.Background(), "adding ondc call save validator")
 	return &validateOndcCallSaveStep{validator: ondcValidator}, nil
 }
+// endregion 
 
-// Run executes the schema validation step.
-func (s *validateSchemaStep) Run(ctx *model.StepContext) error {
-	fmt.Println("Running schema validation step")
-	if err := s.validator.Validate(ctx, ctx.Request.URL, ctx.Body); err != nil {
-		return fmt.Errorf("schema validation failed: %w", err)
-	}
-	return nil
-}
 
-// addRouteStep represents the route determination step.
-type addRouteStep struct {
-	router definition.Router
-}
 
-// newAddRouteStep creates and returns the addRoute step after validation.
-func newAddRouteStep(router definition.Router) (definition.Step, error) {
-	if router == nil {
-		return nil, fmt.Errorf("invalid config: Router plugin not configured")
-	}
-	return &addRouteStep{router: router}, nil
-}
 
-// Run executes the routing step.
-func (s *addRouteStep) Run(ctx *model.StepContext) error {
-
-	route, err := s.router.Route(ctx, ctx.Request.URL, ctx.Body)
-	if err != nil {
-		return fmt.Errorf("failed to determine route: %w", err)
-	}
-	ctx.Route = &model.Route{
-		TargetType:  route.TargetType,
-		PublisherID: route.PublisherID,
-		URL:         route.URL,
-	}
-	return nil
-}
-
+// ============================================================================
+// region WORKBENCH STEPS
+// ============================================================================
 type workbenchReceiveStep struct {
 	workbench definition.OndcWorkbench
 }
@@ -318,3 +395,4 @@ func (s *workbenchValidateContextStep) Run(ctx *model.StepContext) error {
 	}
 	return nil
 }
+// endregion

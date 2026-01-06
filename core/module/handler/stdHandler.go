@@ -32,6 +32,7 @@ type stdHandler struct {
 	SubscriberID     string
 	role             model.Role
 	httpClient       *http.Client
+	moduleName       string
 }
 
 // newHTTPClient creates a new HTTP client with a custom transport configuration.
@@ -53,6 +54,7 @@ func newHTTPClient(cfg *HttpClientConfig, wrapper definition.TransportWrapper) *
 	if cfg.ResponseHeaderTimeout > 0 {
 		transport.ResponseHeaderTimeout = cfg.ResponseHeaderTimeout
 	}
+
 	var finalTransport http.RoundTripper = transport
 	if wrapper != nil {
 		log.Debugf(context.Background(), "Applying custom transport wrapper")
@@ -62,11 +64,12 @@ func newHTTPClient(cfg *HttpClientConfig, wrapper definition.TransportWrapper) *
 }
 
 // NewStdHandler initializes a new processor with plugins and steps.
-func NewStdHandler(ctx context.Context, mgr PluginManager, cfg *Config) (http.Handler, error) {
+func NewStdHandler(ctx context.Context, mgr PluginManager, cfg *Config, moduleName string) (http.Handler, error) {
 	h := &stdHandler{
 		steps:        []definition.Step{},
 		SubscriberID: cfg.SubscriberID,
 		role:         cfg.Role,
+		moduleName:   moduleName,
 	}
 	// Initialize plugins.
 	if err := h.initPlugins(ctx, mgr, &cfg.Plugins); err != nil {
@@ -83,6 +86,16 @@ func NewStdHandler(ctx context.Context, mgr PluginManager, cfg *Config) (http.Ha
 
 // ServeHTTP processes an incoming HTTP request and executes defined processing steps.
 func (h *stdHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	r.Header.Set("X-Module-Name", h.moduleName)
+	r.Header.Set("X-Role", string(h.role))
+
+	// These headers are only needed for internal instrumentation; avoid leaking them downstream.
+	// Use defer to ensure cleanup regardless of return path.
+	defer func() {
+		r.Header.Del("X-Module-Name")
+		r.Header.Del("X-Role")
+	}()
+
 	ctx, err := h.stepCtx(r, w.Header())
 	if err != nil {
 		log.Errorf(r.Context(), err, "stepCtx(r):%v", err)
@@ -342,7 +355,13 @@ func (h *stdHandler) initSteps(ctx context.Context, mgr PluginManager, cfg *Conf
 		if err != nil {
 			return err
 		}
-		h.steps = append(h.steps, s)
+		instrumentedStep, wrapErr := NewInstrumentedStep(s, step, h.moduleName)
+		if wrapErr != nil {
+			log.Warnf(ctx, "Failed to instrument step %s: %v", step, wrapErr)
+			h.steps = append(h.steps, s)
+			continue
+		}
+		h.steps = append(h.steps, instrumentedStep)
 	}
 	log.Infof(ctx, "Processor steps initialized: %v", cfg.Steps)
 	return nil
