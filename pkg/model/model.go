@@ -129,6 +129,8 @@ type Route struct {
 	TargetType  string   // "url" or "publisher"
 	PublisherID string   // For message queues
 	URL         *url.URL // For API calls
+	ActAsProxy  bool     // Whether to act as a proxy for this route
+	RouteOnNACK bool     // Whether to route on NACK responses
 }
 
 // Keyset represents a collection of cryptographic keys used for signing and encryption.

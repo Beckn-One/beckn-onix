@@ -256,12 +256,12 @@ func loadOndcValidator(ctx context.Context, mgr PluginManager, cache definition.
 }
 
 // loadOndcWorkbench loads the OndcWorkbench plugin using the provided PluginManager and cache.
-func loadOndcWorkbench(ctx context.Context, mgr PluginManager, cache definition.Cache, km definition.KeyManager, cfg *plugin.Config) (definition.OndcWorkbench, error) {
+func loadOndcWorkbench(ctx context.Context, mgr PluginManager, cache definition.Cache, cfg *plugin.Config) (definition.OndcWorkbench, error) {
 	if cfg == nil {
 		log.Debug(ctx, "Skipping OndcWorkbench plugin: not configured")
 		return nil, nil
 	}
-	ow, err := mgr.OndcWorkbench(ctx, cache, km, cfg)
+	ow, err := mgr.OndcWorkbench(ctx, cache, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load OndcWorkbench plugin (%s): %w", cfg.ID, err)
 	}
@@ -304,7 +304,7 @@ func (h *stdHandler) initPlugins(ctx context.Context, mgr PluginManager, cfg *Pl
 	if h.ondcValidator,err = loadOndcValidator(ctx, mgr, h.cache, cfg.OndcValidator); err != nil {
 		return err
 	}
-	if h.ondcWorkbench,err = loadOndcWorkbench(ctx, mgr, h.cache,h.km, cfg.OndcWorkbench); err != nil {
+	if h.ondcWorkbench,err = loadOndcWorkbench(ctx, mgr, h.cache, cfg.OndcWorkbench); err != nil {
 		return err
 	}
 

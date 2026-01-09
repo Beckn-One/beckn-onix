@@ -1,0 +1,24 @@
+routingRules:
+  - domain: "ONDC:RET10"
+    version: "1.2.5"
+    targetType: "request_cookie"
+    proxy: false
+    routeOnNACK: false
+    endpoints: &endpoints_list # - search
+      - on_search
+      - select
+      - on_select
+      - init
+      - on_init
+      - confirm
+      - on_confirm
+      - status
+      - on_status
+      - update
+      - on_update
+      - cancel
+      - on_cancel
+      - track
+      - on_track
+      - issue
+      - on_issue

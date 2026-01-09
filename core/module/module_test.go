@@ -85,7 +85,7 @@ func (m *mockPluginManager) OndcValidator(ctx context.Context, cache definition.
 }
 
 // OndcWorkbench returns a mock ONDC workbench implementation.
-func (m *mockPluginManager) OndcWorkbench(ctx context.Context, cache definition.Cache,km definition.KeyManager, cfg *plugin.Config) (definition.OndcWorkbench, error) {
+func (m *mockPluginManager) OndcWorkbench(ctx context.Context, cache definition.Cache, cfg *plugin.Config) (definition.OndcWorkbench, error) {
 	return nil, nil
 }
 

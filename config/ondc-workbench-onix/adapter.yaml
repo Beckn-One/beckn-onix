@@ -41,10 +41,10 @@ modules:
           - id: networkobservability
             config:
               configPath: ./config/ondc-workbench-onix/np_no_config.yaml
-        # router:
-        #   id: router
-        #   config:
-        #     routingConfigPath: ./config/ondc-workbench-onix/np-buyer-router.yaml
+        router:
+          id: router
+          config:
+            routingConfigPath: ./config/ondc-workbench-onix/np_router.yaml
         schemaValidator:
           id: schemavalidator
           config:
