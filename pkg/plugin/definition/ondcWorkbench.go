@@ -12,5 +12,5 @@ type OndcWorkbench interface {
 }
 
 type OndcWorkbenchProvider interface {
-	New(context.Context,Cache,map[string]string) (OndcWorkbench, func() error, error)
+	New(context.Context,Cache,KeyManager,map[string]string) (OndcWorkbench, func() error, error)
 }

@@ -86,6 +86,7 @@ func NewStdHandler(ctx context.Context, mgr PluginManager, cfg *Config, moduleNa
 
 // ServeHTTP processes an incoming HTTP request and executes defined processing steps.
 func (h *stdHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+    
 	r.Header.Set("X-Module-Name", h.moduleName)
 	r.Header.Set("X-Role", string(h.role))
 
@@ -119,6 +120,9 @@ func (h *stdHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// These headers are only needed for internal instrumentation; avoid leaking them downstream.
+	r.Header.Del("X-Module-Name")
+	r.Header.Del("X-Role")
 	// Handle routing based on the defined route type.
 	route(ctx, r, w, h.publisher, h.httpClient)
 }
@@ -185,7 +189,6 @@ func route(ctx *model.StepContext, r *http.Request, w http.ResponseWriter, pb de
 func proxy(ctx *model.StepContext, r *http.Request, w http.ResponseWriter, httpClient *http.Client) {
 	target := ctx.Route.URL
 	r.Header.Set("X-Forwarded-Host", r.Host)
-
 	director := func(req *http.Request) {
 		req.URL = target
 		req.Host = target.Host
@@ -253,12 +256,12 @@ func loadOndcValidator(ctx context.Context, mgr PluginManager, cache definition.
 }
 
 // loadOndcWorkbench loads the OndcWorkbench plugin using the provided PluginManager and cache.
-func loadOndcWorkbench(ctx context.Context, mgr PluginManager, cache definition.Cache, cfg *plugin.Config) (definition.OndcWorkbench, error) {
+func loadOndcWorkbench(ctx context.Context, mgr PluginManager, cache definition.Cache, km definition.KeyManager, cfg *plugin.Config) (definition.OndcWorkbench, error) {
 	if cfg == nil {
 		log.Debug(ctx, "Skipping OndcWorkbench plugin: not configured")
 		return nil, nil
 	}
-	ow, err := mgr.OndcWorkbench(ctx, cache, cfg)
+	ow, err := mgr.OndcWorkbench(ctx, cache, km, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load OndcWorkbench plugin (%s): %w", cfg.ID, err)
 	}
@@ -301,7 +304,7 @@ func (h *stdHandler) initPlugins(ctx context.Context, mgr PluginManager, cfg *Pl
 	if h.ondcValidator,err = loadOndcValidator(ctx, mgr, h.cache, cfg.OndcValidator); err != nil {
 		return err
 	}
-	if h.ondcWorkbench,err = loadOndcWorkbench(ctx, mgr, h.cache, cfg.OndcWorkbench); err != nil {
+	if h.ondcWorkbench,err = loadOndcWorkbench(ctx, mgr, h.cache,h.km, cfg.OndcWorkbench); err != nil {
 		return err
 	}
 

@@ -17,7 +17,8 @@ http:
 pluginManager:
   # root: /app/plugins
   # remoteRoot: /mnt/gcs/plugins/plugins_bundle.zip
-  root: ./plugins
+  # root: ./plugins
+  root: /Users/rudranshsinghal/ondc/dump/plugins
 modules:
   - name: BapTxnReceiver
     path: /api-service/ONDC:RET10/1.2.5/buyer/
@@ -36,6 +37,10 @@ modules:
             addr: localhost:6379
         keyManager:
           id: keymanager
+        middleware:
+          - id: networkobservability
+            config:
+              configPath: ./config/ondc-workbench-onix/np_no_config.yaml
         # router:
         #   id: router
         #   config:
@@ -52,12 +57,14 @@ modules:
         ondcWorkbench:
           id: workbench
           config:
-            auditURL: http://13.233.69.163:8080
+            # auditURL: http://13.233.69.163:8080
             protocolVersion: "1.2.5"
             protocolDomain: "ONDC:RET10"
             moduleRole: "BAP"
             moduleType: "receiver"
             configServiceURL: https://dev-automation.ondc.org/config-service
+            registryURL: https://dev-automation.ondc.org/registry-service
+
       steps:
         - ondcWorkbenchReceiver
         - validateSchema
@@ -86,6 +93,10 @@ modules:
             addr: localhost:6379
         keyManager:
           id: keymanager
+        middleware:
+          - id: networkobservability
+            config:
+              configPath: ./config/ondc-workbench-onix/mock_no_config.yaml
         # router:
         #   id: router
         #   config:
@@ -102,7 +113,7 @@ modules:
         ondcWorkbench:
           id: workbench
           config:
-            auditURL: http://13.233.69.163:8080
+            # auditURL: http://13.233.69.163:8080
             protocolVersion: "1.2.5"
             protocolDomain: "ONDC:RET10"
             moduleRole: "BPP"

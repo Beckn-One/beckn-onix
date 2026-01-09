@@ -1,0 +1,20 @@
+transport: grpc
+grpc_target: 127.0.0.1:8089
+grpc_insecure: true
+grpc_method: /beckn.audit.v1.AuditService/LogEvent
+grpc_timeout_ms: 5000
+async: false
+remap:
+  payload_id: "uuid()"
+  transaction_id: "$.requestBody.context.transaction_id"
+  message_id: "$.requestBody.context.message_id"
+  subscriber_url: "$.ctx.cookies.subscriber_url"
+  action: "$.requestBody.context.action"
+  timestamp: "$.requestBody.context.timestamp"
+  api_name: "$.requestBody.context.action"
+  status_code: "$.ctx.status"
+  ttl_seconds: "$.ctx.cookies.ttl_seconds"
+  cache_ttl_seconds: 0
+  is_mock: false
+  session_id: "$.ctx.cookies.session_id"
+  req_headers: "$.ctx.headers_all"

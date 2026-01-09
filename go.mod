@@ -19,7 +19,7 @@ require (
 
 require github.com/zenazn/pkcs7pad v0.0.0-20170308005700-253a5b1f0e03
 
-require golang.org/x/text v0.26.0 // indirect
+require golang.org/x/text v0.32.0 // indirect
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
