@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"os"
@@ -31,7 +32,8 @@ type RedisClient interface {
 
 // Config holds the configuration required to connect to Redis.
 type Config struct {
-	Addr string
+	Addr   string
+	UseTLS bool
 }
 
 // Cache wraps a Redis client to provide basic caching operations.
@@ -62,11 +64,15 @@ func validate(cfg *Config) error {
 // RedisClientFunc is a function variable that creates a Redis client based on the provided configuration.
 // It can be overridden for testing purposes.
 var RedisClientFunc = func(cfg *Config) RedisClient {
-	return redis.NewClient(&redis.Options{
+	opts := &redis.Options{
 		Addr:     cfg.Addr,
 		Password: os.Getenv("REDIS_PASSWORD"),
 		DB:       0,
-	})
+	}
+	if cfg.UseTLS {
+		opts.TLSConfig = &tls.Config{}
+	}
+	return redis.NewClient(opts)
 }
 
 // New initializes and returns a Cache instance along with a close function to release resources.

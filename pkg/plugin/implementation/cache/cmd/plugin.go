@@ -19,7 +19,8 @@ func (c cacheProvider) New(ctx context.Context, config map[string]string) (defin
 	}
 	// Create cache.Config directly from map - validation is handled by cache.New
 	cacheConfig := &cache.Config{
-		Addr: config["addr"],
+		Addr:   config["addr"],
+		UseTLS: config["use_tls"] == "true",
 	}
 	log.Debugf(ctx, "Cache config mapped: %+v", cacheConfig)
 	cache, closer, err := cache.New(ctx, cacheConfig)
