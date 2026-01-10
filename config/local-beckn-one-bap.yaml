@@ -51,9 +51,16 @@ modules:
           config:
             addr: redis:6379
         schemaValidator:
-          id: schemavalidator
+          id: schemav2validator
           config:
-            schemaDir: ./schemas
+            type: url
+            location: https://raw.githubusercontent.com/beckn/protocol-specifications-new/refs/heads/main/api/beckn.yaml
+            cacheTTL: "3600"
+            extendedSchema_enabled: "true"
+            extendedSchema_cacheTTL: "86400"
+            extendedSchema_maxCacheSize: "100"
+            extendedSchema_downloadTimeout: "30"
+            extendedSchema_allowedDomains: "beckn.org,example.com,raw.githubusercontent.com"
         signValidator:
           id: signvalidator
         router:
@@ -68,6 +75,7 @@ modules:
       steps:
         - validateSign
         - addRoute
+        - validateSchema
   
   - name: bapTxnCaller
     path: /bap/caller/
@@ -102,6 +110,17 @@ modules:
           id: cache
           config:
             addr: redis:6379
+        schemaValidator:
+          id: schemav2validator
+          config:
+            type: url
+            location: https://raw.githubusercontent.com/beckn/protocol-specifications-new/refs/heads/main/api/beckn.yaml
+            cacheTTL: "3600"
+            extendedSchema_enabled: "true"
+            extendedSchema_cacheTTL: "86400"
+            extendedSchema_maxCacheSize: "100"
+            extendedSchema_downloadTimeout: "30"
+            extendedSchema_allowedDomains: "beckn.org,example.com,raw.githubusercontent.com"
         router:
           id: router
           config:
@@ -116,4 +135,5 @@ modules:
       steps:
         - addRoute
         - sign
+        - validateSchema
   
