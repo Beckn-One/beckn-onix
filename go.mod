@@ -1,4 +1,4 @@
-module github.com/extedcoud/beckn-onix
+module github.com/ONDC-Official/beckn-onix
 
 go 1.24.0
 

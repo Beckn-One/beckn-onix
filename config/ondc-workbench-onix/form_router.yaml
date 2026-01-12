@@ -1,0 +1,7 @@
+routingRules:
+  - domain: "ONDC:RET10"
+    version: "1.2.5"
+    targetType: url
+    target:
+      url: "https://dev-automation.ondc.org/automation-recorder/html-form"
+      excludeAction: true
