@@ -48,6 +48,7 @@ var (
 	ErrAddrMissing       = errors.New("missing required field 'Addr'")
 	ErrCredentialMissing = errors.New("missing Redis credentials in environment")
 	ErrConnectionFail    = errors.New("failed to connect to Redis")
+	ErrInvalidUseTLS     = errors.New("use_tls must be a boolean")
 )
 
 // validate checks if the provided Redis configuration is valid.
@@ -58,6 +59,11 @@ func validate(cfg *Config) error {
 	if cfg.Addr == "" {
 		return ErrAddrMissing
 	}
+
+	if cfg.UseTLS != true && cfg.UseTLS != false {
+		return ErrInvalidUseTLS
+	}
+
 	return nil
 }
 
