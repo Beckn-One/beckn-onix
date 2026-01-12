@@ -478,7 +478,7 @@ func TestRouteSuccess(t *testing.T) {
 			defer os.RemoveAll(filepath.Dir(rulesFilePath))
 
 			parsedURL, _ := url.Parse(tt.url)
-			_, err := router.Route(ctx, parsedURL, []byte(tt.body))
+			_, err := router.Route(ctx, parsedURL, []byte(tt.body), nil)
 
 			// Ensure no error occurred
 			if err != nil {
@@ -543,7 +543,7 @@ func TestRouteFailure(t *testing.T) {
 			defer os.RemoveAll(filepath.Dir(rulesFilePath))
 
 			parsedURL, _ := url.Parse(tt.url)
-			_, err := router.Route(ctx, parsedURL, []byte(tt.body))
+			_, err := router.Route(ctx, parsedURL, []byte(tt.body),nil)
 
 			// Check for expected error
 			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
@@ -719,7 +719,7 @@ func TestV2RouteSuccess(t *testing.T) {
 			defer os.RemoveAll(filepath.Dir(rulesFilePath))
 
 			parsedURL, _ := url.Parse(tt.url)
-			_, err := router.Route(ctx, parsedURL, []byte(tt.body))
+			_, err := router.Route(ctx, parsedURL, []byte(tt.body),nil)
 
 			if err != nil {
 				t.Errorf("router.Route() = %v, want nil (domain should be ignored for v2)", err)

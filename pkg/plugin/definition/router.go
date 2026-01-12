@@ -2,6 +2,7 @@ package definition
 
 import (
 	"context"
+	"net/http"
 	"net/url"
 
 	"github.com/beckn-one/beckn-onix/pkg/model"
@@ -15,5 +16,5 @@ type RouterProvider interface {
 // Router defines the interface for routing requests.
 type Router interface {
 	// Route determines the routing destination based on the request context.
-	Route(ctx context.Context, url *url.URL, body []byte) (*model.Route, error)
+	Route(ctx context.Context, url *url.URL, body []byte, request *http.Request) (*model.Route, error)
 }

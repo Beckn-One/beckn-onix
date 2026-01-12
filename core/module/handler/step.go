@@ -257,7 +257,7 @@ func newAddRouteStep(router definition.Router) (definition.Step, error) {
 // Run executes the routing step.
 func (s *addRouteStep) Run(ctx *model.StepContext) error {
 
-	route, err := s.router.Route(ctx, ctx.Request.URL, ctx.Body)
+	route, err := s.router.Route(ctx, ctx.Request.URL, ctx.Body,ctx.Request)
 	if err != nil {
 		return fmt.Errorf("failed to determine route: %w", err)
 	}

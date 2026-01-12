@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httputil"
+	"time"
 
 	"github.com/beckn-one/beckn-onix/pkg/log"
 	"github.com/beckn-one/beckn-onix/pkg/model"
@@ -127,6 +128,45 @@ func (h *stdHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	route(ctx, r, w, h.publisher, h.httpClient)
 }
 
+func (h *stdHandler) ServeHTTPNew(w http.ResponseWriter, r *http.Request) {
+	r.Header.Set("X-Module-Name", h.moduleName)
+	r.Header.Set("X-Role", string(h.role))
+	// These headers are only needed for internal instrumentation; avoid leaking them downstream.
+	// Use defer to ensure cleanup regardless of return path.
+	defer func() {
+		r.Header.Del("X-Module-Name")
+		r.Header.Del("X-Role")
+	}()
+	ctx, err := h.stepCtx(r, w.Header())
+	if err != nil {
+		log.Errorf(r.Context(), err, "stepCtx(r):%v", err)
+		response.SendNack(r.Context(), w, err)
+		return
+	}
+	log.Request(r.Context(), r, ctx.Body)
+	// Execute processing steps.
+	for _, step := range h.steps {
+		if err := step.Run(ctx); err != nil {
+			log.Errorf(ctx, err, "%T.run():%v", step, err)
+			response.SendNack(ctx, w, err)
+			return
+		}
+	}
+	// Restore request body before forwarding or publishing.
+	r.Body = io.NopCloser(bytes.NewReader(ctx.Body))
+	if ctx.Route == nil {
+		response.SendAck(w)
+		return
+	}
+	// These headers are only needed for internal instrumentation; avoid leaking them downstream.
+	r.Header.Del("X-Module-Name")
+	r.Header.Del("X-Role")
+
+
+	route(ctx, r, w, h.publisher, h.httpClient)
+}
+
+
 // stepCtx creates a new StepContext for processing an HTTP request.
 func (h *stdHandler) stepCtx(r *http.Request, rh http.Header) (*model.StepContext, error) {
 	var bodyBuffer bytes.Buffer
@@ -159,32 +199,101 @@ var proxyFunc = proxy
 // route handles request forwarding or message publishing based on the routing type.
 func route(ctx *model.StepContext, r *http.Request, w http.ResponseWriter, pb definition.Publisher, httpClient *http.Client) {
 	log.Debugf(ctx, "Routing to ctx.Route to %#v", ctx.Route)
-	switch ctx.Route.TargetType {
-	case "url":
-		log.Infof(ctx.Context, "Forwarding request to URL: %s", ctx.Route.URL)
-		proxyFunc(ctx, r, w, httpClient)
-		return
-	case "publisher":
-		if pb == nil {
-			err := fmt.Errorf("publisher plugin not configured")
-			log.Errorf(ctx.Context, err, "Invalid configuration:%v", err)
+	
+	if ctx.Route.ActAsProxy {
+		// Act as a proxy and forward the request to the target url
+		switch ctx.Route.TargetType {
+		case "url":
+			log.Infof(ctx.Context, "Forwarding request to URL: %s", ctx.Route.URL)
+			proxyFunc(ctx, r, w, httpClient) // Fixed: was proxyFunc
+			return
+		case "publisher":
+			if pb == nil {
+				err := fmt.Errorf("publisher plugin not configured")
+				log.Errorf(ctx.Context, err, "Invalid configuration: %v", err)
+				response.SendNack(ctx, w, err)
+				return
+			}
+			log.Infof(ctx.Context, "Publishing message to: %s", ctx.Route.PublisherID)
+			if err := pb.Publish(ctx, ctx.Route.PublisherID, ctx.Body); err != nil {
+				log.Errorf(ctx.Context, err, "Failed to publish message")
+				response.SendNack(ctx, w, err)
+				return
+			}
+			response.SendAck(w)
+		default:
+			err := fmt.Errorf("unknown route type: %s", ctx.Route.TargetType)
+			log.Errorf(ctx.Context, err, "Invalid configuration: %v", err)
 			response.SendNack(ctx, w, err)
 			return
 		}
-		log.Infof(ctx.Context, "Publishing message to: %s", ctx.Route.PublisherID)
-		if err := pb.Publish(ctx, ctx.Route.PublisherID, ctx.Body); err != nil {
-			log.Errorf(ctx.Context, err, "Failed to publish message")
-			http.Error(w, "Error publishing message", http.StatusInternalServerError)
-			response.SendNack(ctx, w, err)
-			return
+	} else {
+
+		val,err:= ctx.Request.Cookie("custom-response-body")
+
+		if( err == nil){
+			response.SendBody(ctx, w, val.Value)
+		}else{
+			// Ack the request immediately and then make an async HTTP request to the target url
+			response.SendAck(w)
 		}
-	default:
-		err := fmt.Errorf("unknown route type: %s", ctx.Route.TargetType)
-		log.Errorf(ctx.Context, err, "Invalid configuration:%v", err)
-		response.SendNack(ctx, w, err)
-		return
+		
+		// Make async request in a goroutine (fire and forget)
+		go func() {
+			// Create a new context with timeout to prevent goroutine leaks
+			asyncCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			
+			switch ctx.Route.TargetType {
+			case "url":
+				log.Infof(asyncCtx, "Making async request to URL: %s", ctx.Route.URL)
+				if err := makeAsyncRequest(asyncCtx, ctx, httpClient); err != nil {
+					log.Errorf(asyncCtx, err, "Async request failed")
+				}
+			case "publisher":
+				if pb == nil {
+					log.Errorf(asyncCtx, nil, "Publisher plugin not configured for async operation")
+					return
+				}
+				log.Infof(asyncCtx, "Publishing message asynchronously to: %s", ctx.Route.PublisherID)
+				if err := pb.Publish(ctx, ctx.Route.PublisherID, ctx.Body); err != nil {
+					log.Errorf(asyncCtx, err, "Failed to publish message asynchronously")
+				}
+			default:
+				log.Errorf(asyncCtx, nil, "Unknown route type: %s", ctx.Route.TargetType)
+			}
+		}()
 	}
-	response.SendAck(w)
+}
+
+// makeAsyncRequest makes an HTTP request without blocking the original request
+func makeAsyncRequest(ctx context.Context, stepCtx *model.StepContext, httpClient *http.Client) error {
+	target := stepCtx.Route.URL
+	
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, target.String(), bytes.NewReader(stepCtx.Body))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+	
+	// Copy relevant headers from original request
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Forwarded-Host", stepCtx.Route.URL.Host)
+	
+	log.Request(ctx, req, stepCtx.Body)
+	
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to execute request: %w", err)
+	}
+	defer resp.Body.Close()
+	
+	// Log response for debugging
+	if resp.StatusCode >= 400 {
+		body, _ := io.ReadAll(resp.Body)
+		log.Warnf(ctx, "Async request returned error status %d: %s", resp.StatusCode, string(body))
+	}
+	
+	return nil
 }
 func proxy(ctx *model.StepContext, r *http.Request, w http.ResponseWriter, httpClient *http.Client) {
 	target := ctx.Route.URL

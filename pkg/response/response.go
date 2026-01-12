@@ -12,6 +12,45 @@ import (
 	"github.com/beckn-one/beckn-onix/pkg/model"
 )
 
+func SendBody(ctx context.Context, w http.ResponseWriter, body interface{}) {
+
+	if bodyStr, ok := body.(string); ok {
+		body = parseJSONOrDefault(bodyStr)
+	}
+
+	data, err := json.Marshal(body)
+	if err != nil {
+		log.Errorf(ctx,err,"Failed to marshal response body, MessageID: %s", ctx.Value(model.ContextKeyMsgID))
+		http.Error(w, fmt.Sprintf("Internal server error, MessageID: %s", ctx.Value(model.ContextKeyMsgID)), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, er := w.Write(data)
+	if er != nil {
+		log.Errorf(ctx,er,"Error writing response: %v, MessageID: %s", er, ctx.Value(model.ContextKeyMsgID))
+		http.Error(w, fmt.Sprintf("Internal server error, MessageID: %s", ctx.Value(model.ContextKeyMsgID)), http.StatusInternalServerError)
+		return
+	}
+}
+
+// ParseJSONOrDefault attempts to parse a JSON string into an interface{}.
+// If parsing fails, it returns a map with the original string as a message.
+func parseJSONOrDefault(str string) interface{} {
+	var result interface{}
+	
+	if err := json.Unmarshal([]byte(str), &result); err != nil {
+		// JSON parsing failed, return default structure
+		return map[string]interface{}{
+			"message": str,
+		}
+	}
+	
+	return result
+}
+
+
 // SendAck sends an acknowledgment response (ACK) to the client.
 func SendAck(w http.ResponseWriter) {
 	resp := &model.Response{

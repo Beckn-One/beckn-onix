@@ -130,7 +130,7 @@ type Route struct {
 	PublisherID string   // For message queues
 	URL         *url.URL // For API calls
 	ActAsProxy  bool     // Whether to act as a proxy for this route
-	RouteOnNACK bool     // Whether to route on NACK responses
+	JsonPath	string   // JSONPath to extract URL from http request -> internal use only
 }
 
 // Keyset represents a collection of cryptographic keys used for signing and encryption.

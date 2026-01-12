@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"path"
@@ -200,7 +201,7 @@ func validateRules(rules []routingRule) error {
 }
 
 // Route determines the routing destination based on the request context.
-func (r *Router) Route(ctx context.Context, url *url.URL, body []byte) (*model.Route, error) {
+func (r *Router) Route(ctx context.Context, url *url.URL, body []byte, request *http.Request) (*model.Route, error) {
 	// Parse the body to extract domain and version
 	var requestBody struct {
 		Context struct {
