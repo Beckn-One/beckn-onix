@@ -56,7 +56,7 @@ func (e *SchemaValidationErr) BecknError() *Error {
 	return &Error{
 		Code:    http.StatusText(http.StatusBadRequest),
 		Paths:   strings.Join(paths, ";"),
-		Message: strings.Join(messages, "; "),
+		Message: strings.Join(messages, ";\n "),
 	}
 }
 

@@ -265,6 +265,7 @@ func (s *addRouteStep) Run(ctx *model.StepContext) error {
 		TargetType:  route.TargetType,
 		PublisherID: route.PublisherID,
 		URL:         route.URL,
+		ActAsProxy:  route.ActAsProxy,
 	}
 	if s.metrics != nil && ctx.Route != nil {
 		s.metrics.RoutingDecisionsTotal.Add(ctx.Context, 1,
@@ -369,8 +370,14 @@ func newWorkbenchReceiveStep(workbench definition.OndcWorkbench) (definition.Ste
 
 // Run executes the workbench receive step.
 func (s *workbenchReceiveStep) Run(ctx *model.StepContext) error {
+	log.Debugf(ctx,"Executing ONDC workbench receive step")
 	if err := s.workbench.WorkbenchReceiver(ctx,ctx.Request,ctx.Body); err != nil {
 		return fmt.Errorf("ondc workbench receive step failed: %w", err)
+	}
+	subscriberIDCookie , err := ctx.Request.Cookie("subscriber_id")
+	log.Debugf(ctx,"Extracted subscriber_id cookie: %v", subscriberIDCookie)
+	if err == nil {
+		ctx.SubID = subscriberIDCookie.Value
 	}
 	return nil
 }

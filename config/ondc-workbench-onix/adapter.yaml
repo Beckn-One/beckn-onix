@@ -33,8 +33,8 @@ modules:
       plugins:
         cache:
           id: cache
-          config:
-            addr: localhost:6379
+          config: &cache_config
+            addr: 13.233.69.163:6380
         keyManager:
           id: keymanager
         middleware:
@@ -44,11 +44,11 @@ modules:
         router:
           id: router
           config:
-            routingConfigPath: ./config/ondc-workbench-onix/np_router.yaml
+            routingConfig: ./config/ondc-workbench-onix/np_router.yaml
         schemaValidator:
           id: schemavalidator
           config:
-            schemaDir: ./schemas
+            schemaDir: /Users/rudranshsinghal/ondc/automation-utility/official-code/bekn-onix/beckn-onix/schemas
         ondcValidator:
           id: ondcvalidator
           config:
@@ -57,55 +57,23 @@ modules:
         ondcWorkbench:
           id: workbench
           config:
-            # auditURL: http://13.233.69.163:8080
             protocolVersion: "1.2.5"
             protocolDomain: "ONDC:RET10"
             moduleRole: "BAP"
             moduleType: "receiver"
             configServiceURL: https://dev-automation.ondc.org/config-service
             registryURL: https://dev-automation.ondc.org/registry-service
-
+            mockServiceURL: http://localhost:5002/mock
+        signValidator:
+          id: signvalidator
       steps:
         - ondcWorkbenchReceiver
+        - addRoute
         - validateSchema
         - validateOndcPayload
         - ondcWorkbenchValidateContext
+        - validateSign
         - validateOndcCallSave
-        # - addRoute
-  - name: BapTxnCaller
-    path: /api-service/ONDC:RET10/1.2.5/mock/buyer
-    handler:
-      type: std
-      role: bap
-      httpClientConfig:
-        maxIdleConns: 1000
-        maxIdleConnsPerHost: 200
-        idleConnTimeout: 300s
-        responseHeaderTimeout: 5s
-      plugins:
-        cache:
-          id: cache
-          config:
-            addr: localhost:6379
-        keyManager:
-          id: keymanager
-        middleware:
-          - id: networkobservability
-            config:
-              configPath: ./config/ondc-workbench-onix/mock_no_config.yaml
-        schemaValidator:
-          id: schemavalidator
-          config:
-            schemaDir: ./schemas
-        ondcValidator:
-          id: ondcvalidator
-          config:
-            stateFullValidations: true
-            debugMode: false
-        ondcWorkbench:
-          id: workbench
-          config:
-            # auditURL: http://
   - name: BppTxnReceiver
     path: /api-service/ONDC:RET10/1.2.5/seller/
     handler:
@@ -119,8 +87,7 @@ modules:
       plugins:
         cache:
           id: cache
-          config:
-            addr: localhost:6379
+          config: *cache_config
         keyManager:
           id: keymanager
         middleware:
@@ -130,11 +97,11 @@ modules:
         router:
           id: router
           config:
-            routingConfigPath: ./config/ondc-workbench-onix/np_router.yaml
+            routingConfig: ./config/ondc-workbench-onix/np_router.yaml
         schemaValidator:
           id: schemavalidator
           config:
-            schemaDir: ./schemas
+            schemaDir: /Users/rudranshsinghal/ondc/automation-utility/official-code/bekn-onix/beckn-onix/schemas
         ondcValidator:
           id: ondcvalidator
           config:
@@ -148,14 +115,16 @@ modules:
             moduleRole: "BPP"
             moduleType: "receiver"
             configServiceURL: https://dev-automation.ondc.org/config-service
+            mockServiceURL: http://localhost:5002/mock
       steps:
         - ondcWorkbenchReceiver
+        - addRoute
         - validateSchema
         - validateOndcPayload
         - ondcWorkbenchValidateContext
         - validateOndcCallSave
-  - name: BppTxnCaller
-    path: /api-service/ONDC:RET10/1.2.5/mock/seller
+  - name: mockTxnCaller
+    path: /api-service/ONDC:RET10/1.2.5/mock/
     handler:
       type: std
       role: bpp
@@ -167,8 +136,7 @@ modules:
       plugins:
         cache:
           id: cache
-          config:
-            addr: localhost:6379
+          config: *cache_config
         keyManager:
           id: keymanager
         middleware:
@@ -178,11 +146,11 @@ modules:
         router:
           id: router
           config:
-            routingConfigPath: ./config/ondc-workbench-onix/np-router.yaml
+            routingConfig: ./config/ondc-workbench-onix/mock_router.yaml
         schemaValidator:
           id: schemavalidator
           config:
-            schemaDir: ./schemas
+            schemaDir: /Users/rudranshsinghal/ondc/automation-utility/official-code/bekn-onix/beckn-onix/schemas
         ondcValidator:
           id: ondcvalidator
           config:
@@ -193,13 +161,18 @@ modules:
           config:
             protocolVersion: "1.2.5"
             protocolDomain: "ONDC:RET10"
-            moduleRole: "BPP"
+            moduleRole: "BAP" # doesnt matter for caller with ondc workbench
             moduleType: "caller"
             configServiceURL: https://dev-automation.ondc.org/config-service
+            mockServiceURL: http://localhost:5002/mock
+        signer:
+          id: signer
       steps:
         - ondcWorkbenchReceiver
+        - addRoute
         - validateSchema
         - ondcWorkbenchValidateContext
+        - sign
         - validateOndcCallSave
   - name: standaloneValidator
     path: /api-service/ONDC:RET10/1.2.5/test/
@@ -215,7 +188,7 @@ modules:
         schemaValidator:
           id: schemavalidator
           config:
-            schemaDir: ./schemas
+            schemaDir: /Users/rudranshsinghal/ondc/automation-utility/official-code/bekn-onix/beckn-onix/schemas
         ondcValidator:
           id: ondcvalidator
           config:
@@ -225,7 +198,7 @@ modules:
         - validateSchema
         - validateOndcPayload
   - name: formReceiver
-    path: /api-service/ONDC:RET10/1.2.5/html-form/
+    path: /api-service/ONDC:RET10/1.2.5/html-form
     handler:
       type: std
       role: bap
@@ -238,4 +211,6 @@ modules:
         router:
           id: router
           config:
-            routingConfigPath: ./config/ondc-workbench-onix/form_router.yaml
+            routingConfig: ./config/ondc-workbench-onix/form_router.yaml
+      steps:
+        - addRoute

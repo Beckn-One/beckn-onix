@@ -3,5 +3,7 @@ routingRules:
     version: "1.2.5"
     targetType: url
     target:
-      url: "https://dev-automation.ondc.org/automation-recorder/html-form"
+      url: "http://localhost:8090/html-form"
       excludeAction: true
+    endpoints:
+      - html-form

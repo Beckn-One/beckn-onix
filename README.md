@@ -14,8 +14,10 @@
 </div>
 
 ---
+
 ## Latest Update
-In August 2025, a completely new Beckn-ONIX adapter was made available. This version introduces a Plugin framework at it's core. 
+
+In August 2025, a completely new Beckn-ONIX adapter was made available. This version introduces a Plugin framework at it's core.
 The ONIX Adapter previous to this release is archived to a separate branch, [main-pre-plugins](https://github.com/beckn/beckn-onix/tree/main-pre-plugins) for reference.
 
 ## Overview
@@ -40,31 +42,37 @@ The **Beckn Protocol** is an open protocol that enables location-aware, local co
 ## Features
 
 ### 🔌 **Plugin-Based Architecture**
+
 - **Dynamic Plugin Loading**: Load and configure plugins at runtime without code changes
 - **Extensible Design**: Easy to add new functionality through custom plugins
 - **Hot-Swappable Components**: Update plugins without application restart (in development)
 
 ### 🔐 **Enterprise Security**
+
 - **Ed25519 Digital Signatures**: Cryptographically secure message signing and validation
 - **HashiCorp Vault Integration**: Centralized secrets and key management
 - **Request Authentication**: Every message is authenticated and validated
 - **TLS/SSL Support**: Encrypted communication channels
 
 ### ✅ **Protocol Compliance**
+
 - **JSON Schema Validation**: Ensures all messages comply with Beckn protocol specifications
 - **Version Management**: Support for multiple protocol versions simultaneously
 - **Domain-Specific Schemas**: Tailored validation for different business domains
 
 ### 🚀 **High Performance**
+
 - **Redis Caching**: Response caching for improved performance
 - **RabbitMQ Integration**: Asynchronous message processing via message queues
 - **Connection Pooling**: Efficient resource utilization
 - **Configurable Timeouts**: Fine-tuned performance controls
 
 ### 📊 **Observability**
+
 - **Structured Logging**: JSON-formatted logs with contextual information
 - **Transaction Tracking**: End-to-end request tracing with unique IDs
 - **OpenTelemetry Metrics**: Pull-based metrics exposed via `/metrics`
+
   - RED metrics for every module and action (rate, errors, duration)
   - Per-step histograms with error attribution
   - Cache, routing, plugin, and business KPIs (signature/schema validations, Beckn messages)
@@ -81,15 +89,18 @@ The **Beckn Protocol** is an open protocol that enables location-aware, local co
           enableMetrics: "true"
           environment: "development"
     ```
+
   - **Modular Metrics Architecture**: Metrics are organized by module for better maintainability:
     - OTel SDK wiring via `otelsetup` plugin
     - Step execution metrics in `telemetry` package
     - Handler metrics (signature, schema, routing) in `handler` module
     - Cache metrics in `cache` plugin
+
 - **Runtime Instrumentation**: Go runtime + Redis client metrics baked in
 - **Health Checks**: Liveness and readiness probes for Kubernetes
 
 #### Monitoring Quick Start
+
 ```bash
 ./install/build-plugins.sh
 go build -o beckn-adapter ./cmd/adapter
@@ -97,13 +108,16 @@ go build -o beckn-adapter ./cmd/adapter
 cd monitoring && docker-compose -f docker-compose-monitoring.yml up -d
 open http://localhost:3000 # Grafana (admin/admin)
 ```
+
 Resources:
+
 - `monitoring/prometheus.yml` – scrape config
 - `monitoring/prometheus-alerts.yml` – alert rules (RED, cache, step, plugin)
 - `monitoring/grafana/dashboards/beckn-onix-overview.json` – curated dashboard
 - `docs/METRICS_RUNBOOK.md` – runbook with PromQL recipes & troubleshooting
 
 ### 🌐 **Multi-Domain Support**
+
 - **Retail & E-commerce**: Product search, order management, fulfillment tracking
 - **Mobility Services**: Ride-hailing, public transport, vehicle rentals
 - **Logistics**: Shipping, last-mile delivery, returns management
@@ -139,12 +153,14 @@ Resources:
 ### Core Components
 
 #### 1. **Transaction Modules**
+
 - `bapTxnReceiver`: Receives callback responses at BAP
 - `bapTxnCaller`: Sends requests from BAP to BPP
 - `bppTxnReceiver`: Receives requests at BPP
 - `bppTxnCaller`: Sends responses from BPP to BAP
 
 #### 2. **Processing Steps**
+
 - `validateSign`: Validates digital signatures on incoming requests
 - `addRoute`: Determines routing based on configuration
 - `validateSchema`: Validates against JSON schemas
@@ -153,12 +169,13 @@ Resources:
 - `publish`: Publishes messages to queue
 
 #### 3. **Plugin Types**
-- **Cache**: Redis-based response caching 
+
+- **Cache**: Redis-based response caching
 - **Router**: YAML-based routing rules engine for request forwarding (supports domain-agnostic routing for Beckn v2.x.x)
 - **Signer**: Ed25519 digital signature creation for outgoing requests
 - **SignValidator**: Ed25519 signature validation for incoming requests
 - **SchemaValidator**: JSON schema validation
-- **Schemav2Validator**: OpenAPI 3.x schema validation with action-based matching 
+- **Schemav2Validator**: OpenAPI 3.x schema validation with action-based matching
 - **KeyManager**: HashiCorp Vault integration for production key management
 - **SimpleKeyManager**: Embedded key management for local development (no external dependencies)
 - **Publisher**: RabbitMQ message publishing for asynchronous processing
@@ -179,27 +196,32 @@ Resources:
 ### Build and Run
 
 1. **Clone the repository**
+
 ```bash
 git clone https://github.com/beckn/beckn-onix.git
 cd beckn-onix
 ```
 
 2. **Build the application**
+
 ```bash
 go build -o server cmd/adapter/main.go
 ```
 
 3. **Build plugins**
+
 ```bash
 ./install/build-plugins.sh
 ```
 
 4. **Extract schemas**
+
 ```bash
 unzip schemas.zip
 ```
 
 5. **Start Redis** (if not running)
+
 ```bash
 docker run -d -p 6379:6379 redis:alpine
 ```
@@ -209,11 +231,12 @@ docker run -d -p 6379:6379 redis:alpine
 **Note**: You can modify the configuration file to suit your environment before starting the server. ONIX adapter/server must be restarted to reflect any change made to the config file.
 
 The following config change is required to all cache related entries in order to connect to `redis` that was started earlier.
+
 ```yaml
-        cache:
-          id: cache
-          config:
-            addr: localhost:6379
+cache:
+  id: cache
+  config:
+    addr: localhost:6379
 ```
 
 7. **Run the application**
@@ -233,10 +256,11 @@ For local setup, starts only redis and onix adapter:
 git clone https://github.com/beckn/beckn-onix.git
 cd beckn-onix/install
 chmod +x setup.sh
-./setup.sh
+./setup.shmodel.ContextKeySubscriberI
 ```
 
 This automated script will:
+
 - Start Redis container
 - Build all plugins with correct Go version
 - Build the adapter server
@@ -244,6 +268,7 @@ This automated script will:
 - Create environment configuration
 
 **Note:**
+
 - **Schema Validation**: Extract schemas before running: `unzip schemas.zip` (required for `schemavalidator` plugin)
 - **Alternative**: You can use `schemav2validator` plugin instead, which fetches schemas from a URL and doesn't require local schema extraction. See [CONFIG.md](CONFIG.md) for more configuration details.
 - **Optional**: Before running the automated setup, build the adapter image and update `docker-compose-adapter.yaml` to use the correct image
@@ -256,6 +281,7 @@ docker build -f Dockerfile.adapter-with-plugins -t beckn-onix:latest .
 **For detailed setup instructions, see [SETUP.md](SETUP.md)**
 
 **Services Started:**
+
 - Redis: localhost:6379
 - ONIX Adapter: http://localhost:8081
 
@@ -288,7 +314,7 @@ curl -X POST http://localhost:8081/bap/caller/search \
       "country": "IND",
       "city": "std:080",
       "action": "search",
-      "version": "0.9.4", 
+      "version": "0.9.4",
       "bap_id": "bap.example.com",
       "bap_uri": "https://bap.example.com/beckn",
       "transaction_id": "550e8400-e29b-41d4-a716-446655440000",
@@ -349,9 +375,9 @@ modules:
           config:
             routingConfig: ./config/routing.yaml
         schemaValidator:
-          id: schemavalidator  # or schemav2validator 
+          id: schemavalidator # or schemav2validator
           config:
-            schemaDir: ./schemas  # for schemavalidator
+            schemaDir: ./schemas # for schemavalidator
             # type: url           # for schemav2validator
             # location: https://example.com/spec.yaml
       steps:
@@ -363,8 +389,8 @@ modules:
 ### Deployment Modes
 
 1. **Combined Mode**: Single instance handling both BAP and BPP (`config/onix/`) - Uses `secretskeymanager` (HashiCorp Vault) for production key management
-2. **BAP-Only Mode**: Dedicated buyer-side deployment (`config/onix-bap/`) 
-3. **BPP-Only Mode**: Dedicated seller-side deployment (`config/onix-bpp/`) 
+2. **BAP-Only Mode**: Dedicated buyer-side deployment (`config/onix-bap/`)
+3. **BPP-Only Mode**: Dedicated seller-side deployment (`config/onix-bpp/`)
 4. **Local Development Combined Mode**: Simplified configuration (`config/local-simple.yaml`) - Uses `simplekeymanager` with embedded Ed25519 keys, no vault setup needed.
 5. **Local Development Combined Mode (Alternative)**: Development configuration (`config/local-dev.yaml`) - Uses `keymanager` vault setup needed
 
@@ -372,39 +398,39 @@ modules:
 
 ### BAP Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/bap/caller/search` | Search for products/services |
-| POST | `/bap/caller/select` | Select specific items |
-| POST | `/bap/caller/init` | Initialize order |
-| POST | `/bap/caller/confirm` | Confirm order |
-| POST | `/bap/caller/status` | Check order status |
-| POST | `/bap/caller/track` | Track order/shipment |
-| POST | `/bap/caller/cancel` | Cancel order |
-| POST | `/bap/caller/update` | Update order |
-| POST | `/bap/caller/rating` | Submit rating |
-| POST | `/bap/caller/support` | Get support |
+| Method | Endpoint              | Description                  |
+| ------ | --------------------- | ---------------------------- |
+| POST   | `/bap/caller/search`  | Search for products/services |
+| POST   | `/bap/caller/select`  | Select specific items        |
+| POST   | `/bap/caller/init`    | Initialize order             |
+| POST   | `/bap/caller/confirm` | Confirm order                |
+| POST   | `/bap/caller/status`  | Check order status           |
+| POST   | `/bap/caller/track`   | Track order/shipment         |
+| POST   | `/bap/caller/cancel`  | Cancel order                 |
+| POST   | `/bap/caller/update`  | Update order                 |
+| POST   | `/bap/caller/rating`  | Submit rating                |
+| POST   | `/bap/caller/support` | Get support                  |
 
 ### BPP Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/bpp/receiver/*` | Receives all BAP requests |
-| POST | `/bpp/caller/on_*` | Sends responses back to BAP |
+| Method | Endpoint           | Description                 |
+| ------ | ------------------ | --------------------------- |
+| POST   | `/bpp/receiver/*`  | Receives all BAP requests   |
+| POST   | `/bpp/caller/on_*` | Sends responses back to BAP |
 
 ### Observability Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/health` | Health check endpoint |
-| GET | `/metrics` | Prometheus metrics endpoint (when telemetry is enabled) |
+| Method | Endpoint   | Description                                             |
+| ------ | ---------- | ------------------------------------------------------- |
+| GET    | `/health`  | Health check endpoint                                   |
+| GET    | `/metrics` | Prometheus metrics endpoint (when telemetry is enabled) |
 
 **Note**: The `/metrics` endpoint is available when `telemetry.enableMetrics: true` in the configuration file. It returns metrics in Prometheus format.
 
 ## Documentation
 
 - **[Setup Guide](SETUP.md)**: Complete installation, configuration, and deployment instructions
-- **[Configuration Guide](CONFIG.md)**: Description of Configuration concepts and all config parameters 
+- **[Configuration Guide](CONFIG.md)**: Description of Configuration concepts and all config parameters
 - **[Contributing](CONTRIBUTING.md)**: Guidelines for contributors
 - **[Governance](GOVERNANCE.md)**: Project governance model
 - **[License](LICENSE)**: Apache 2.0 license details
@@ -412,6 +438,7 @@ modules:
 ## GUI Component
 
 The project includes a Next.js-based GUI component located in `onix-gui/` that provides:
+
 - Visual configuration management
 - Request/response monitoring
 - Plugin status dashboard
@@ -437,6 +464,7 @@ go test -race ./...
 ## Contributing
 
 We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details on:
+
 - Code of Conduct
 - Development process
 - Submitting pull requests
@@ -456,28 +484,28 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 - [Beckn Foundation](https://beckn.org) for the protocol specifications
 
-| Contributor | Organization | Github ID |
-|--------|----------|-------------|
-| Ashish Guliya | Google Cloud | ashishkgGoogle |
-| Pooja Joshi | Google Cloud | poojajoshi2 |
-| Deepa Mulchandani | Google Cloud | Deepa-Mulchandani |
-| Ankit | FIDE | ankitShogun |
-| Abhishek | FIDE | em-abee |
-| Viraj Kulkarni | FIDE | viraj89 |
-| Amay Pandey | Google Cloud |  |
-| Dipika Prasad | Google Cloud | DipikaPrasad |
-| Tanya Madaan | ONDC | tanyamadaan |
-| Binu | ONDC |  |
-| Faiz M | FIDE | faizmagic |
-| Ravi Prakash | FIDE | ravi-prakash-v |
-| Siddharth Prakash | Google Cloud |  |
-| Namya Patiyal | Google Cloud |  |
-| Saksham Nagpal | Google Cloud | sakshamGoogle |
-| Arpit Bharadwaj | Google Cloud |  |
-| Pranoy | Google Cloud |  |
-| Mayuresh Nirhali | FIDE Volunteer | nirmay |
-| Madhuvandhini B | Google Cloud | madhuvandhini5856 |
-| Siddhartha Banerjee | Google Cloud | sidb85 |
+| Contributor         | Organization   | Github ID         |
+| ------------------- | -------------- | ----------------- |
+| Ashish Guliya       | Google Cloud   | ashishkgGoogle    |
+| Pooja Joshi         | Google Cloud   | poojajoshi2       |
+| Deepa Mulchandani   | Google Cloud   | Deepa-Mulchandani |
+| Ankit               | FIDE           | ankitShogun       |
+| Abhishek            | FIDE           | em-abee           |
+| Viraj Kulkarni      | FIDE           | viraj89           |
+| Amay Pandey         | Google Cloud   |                   |
+| Dipika Prasad       | Google Cloud   | DipikaPrasad      |
+| Tanya Madaan        | ONDC           | tanyamadaan       |
+| Binu                | ONDC           |                   |
+| Faiz M              | FIDE           | faizmagic         |
+| Ravi Prakash        | FIDE           | ravi-prakash-v    |
+| Siddharth Prakash   | Google Cloud   |                   |
+| Namya Patiyal       | Google Cloud   |                   |
+| Saksham Nagpal      | Google Cloud   | sakshamGoogle     |
+| Arpit Bharadwaj     | Google Cloud   |                   |
+| Pranoy              | Google Cloud   |                   |
+| Mayuresh Nirhali    | FIDE Volunteer | nirmay            |
+| Madhuvandhini B     | Google Cloud   | madhuvandhini5856 |
+| Siddhartha Banerjee | Google Cloud   | sidb85            |
 
 ---
 

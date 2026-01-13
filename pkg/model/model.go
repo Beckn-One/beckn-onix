@@ -187,4 +187,5 @@ type Message struct {
 type Response struct {
 	Context  any `json:"context,omitempty"`
 	Message Message `json:"message"`
+	Error	*Error  `json:"error,omitempty"`
 }

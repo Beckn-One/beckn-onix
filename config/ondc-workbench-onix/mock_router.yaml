@@ -1,11 +1,12 @@
 routingRules:
   - domain: "ONDC:RET10"
     version: "1.2.5"
-    targetType: JsonPath
+    targetType: "jsonPath"
     target:
       jsonPath: "$.cookies.subscriber_url"
     actAsProxy: true
-    endpoints: &endpoints_list # - search
+    endpoints: &endpoints_list
+      - search
       - on_search
       - select
       - on_select

@@ -80,10 +80,10 @@ func nack(ctx context.Context, w http.ResponseWriter, err *model.Error, status i
 			Ack: model.Ack{
 				Status: model.StatusNACK,
 			},
-			Error: &model.Error{
-				Code:    err.Code,
-				Message: err.Message,
-			},
+		},
+		Error: &model.Error{
+			Code:    err.Code,
+			Message: err.Message,
 		},
 	}
 	if(err.Context != nil){
