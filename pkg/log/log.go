@@ -266,7 +266,7 @@ func Request(ctx context.Context, r *http.Request, body []byte) {
 	addCtx(ctx, event)
 	event.Str("method", r.Method).
 		Str("url", r.URL.String()).
-		Str("body", string(body)).
+		// Str("body", string(body)).
 		Str("remoteAddr", r.RemoteAddr).
 		Msg("HTTP Request")
 }

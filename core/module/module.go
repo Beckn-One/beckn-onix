@@ -49,6 +49,7 @@ func Register(ctx context.Context, mCfgs []Config, mux *http.ServeMux, mgr handl
 
 		}
 		h = moduleCtxMiddleware(c.Name, h)
+		h = PostResponseMiddleware()(h)
 		log.Debugf(ctx, "Registering handler %s, of type %s @ %s", c.Name, c.Handler.Type, c.Path)
 		mux.Handle(c.Path, h)
 	}
@@ -82,4 +83,30 @@ func moduleCtxMiddleware(moduleName string, next http.Handler) http.Handler {
 		ctx := context.WithValue(r.Context(), model.ContextKeyModuleID, moduleName)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+func PostResponseMiddleware() func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var hooks []handler.PostResponseHook
+
+			// store hook list pointer in request context
+			ctx := context.WithValue(r.Context(), handler.PostResponseKey{}, &hooks)
+			r = r.WithContext(ctx)
+
+			next.ServeHTTP(w, r)
+
+			// 🔥 EXTREME LAST POINT 🔥
+			for _, hook := range hooks {
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							log.Errorf(ctx, nil, "post-response hook panic: %v", r)
+						}
+					}()
+					hook()
+				}()
+			}
+		})
+	}
 }

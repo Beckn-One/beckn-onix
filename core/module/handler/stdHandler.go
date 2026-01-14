@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httputil"
-	"time"
 
 	"github.com/beckn-one/beckn-onix/pkg/log"
 	"github.com/beckn-one/beckn-onix/pkg/model"
@@ -87,7 +86,7 @@ func NewStdHandler(ctx context.Context, mgr PluginManager, cfg *Config, moduleNa
 
 // ServeHTTP processes an incoming HTTP request and executes defined processing steps.
 func (h *stdHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-    
+
 	r.Header.Set("X-Module-Name", h.moduleName)
 	r.Header.Set("X-Role", string(h.role))
 
@@ -128,45 +127,6 @@ func (h *stdHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	route(ctx, r, w, h.publisher, h.httpClient)
 }
 
-func (h *stdHandler) ServeHTTPNew(w http.ResponseWriter, r *http.Request) {
-	r.Header.Set("X-Module-Name", h.moduleName)
-	r.Header.Set("X-Role", string(h.role))
-	// These headers are only needed for internal instrumentation; avoid leaking them downstream.
-	// Use defer to ensure cleanup regardless of return path.
-	defer func() {
-		r.Header.Del("X-Module-Name")
-		r.Header.Del("X-Role")
-	}()
-	ctx, err := h.stepCtx(r, w.Header())
-	if err != nil {
-		log.Errorf(r.Context(), err, "stepCtx(r):%v", err)
-		response.SendNack(r.Context(), w, err)
-		return
-	}
-	log.Request(r.Context(), r, ctx.Body)
-	// Execute processing steps.
-	for _, step := range h.steps {
-		if err := step.Run(ctx); err != nil {
-			log.Errorf(ctx, err, "%T.run():%v", step, err)
-			response.SendNack(ctx, w, err)
-			return
-		}
-	}
-	// Restore request body before forwarding or publishing.
-	r.Body = io.NopCloser(bytes.NewReader(ctx.Body))
-	if ctx.Route == nil {
-		response.SendAck(w)
-		return
-	}
-	// These headers are only needed for internal instrumentation; avoid leaking them downstream.
-	r.Header.Del("X-Module-Name")
-	r.Header.Del("X-Role")
-
-
-	route(ctx, r, w, h.publisher, h.httpClient)
-}
-
-
 // stepCtx creates a new StepContext for processing an HTTP request.
 func (h *stdHandler) stepCtx(r *http.Request, rh http.Header) (*model.StepContext, error) {
 	var bodyBuffer bytes.Buffer
@@ -199,7 +159,7 @@ var proxyFunc = proxy
 // route handles request forwarding or message publishing based on the routing type.
 func route(ctx *model.StepContext, r *http.Request, w http.ResponseWriter, pb definition.Publisher, httpClient *http.Client) {
 	log.Debugf(ctx, "Routing to ctx.Route to %#v", ctx.Route)
-	
+
 	if ctx.Route.ActAsProxy {
 		// Act as a proxy and forward the request to the target url
 		switch ctx.Route.TargetType {
@@ -229,70 +189,61 @@ func route(ctx *model.StepContext, r *http.Request, w http.ResponseWriter, pb de
 		}
 	} else {
 
-		val,err:= ctx.Request.Cookie("custom-response-body")
+		val, err := ctx.Request.Cookie("custom-response-body")
 
-		if( err == nil){
+		if err == nil {
 			response.SendBody(ctx, w, val.Value)
-		}else{
+		} else {
 			// Ack the request immediately and then make an async HTTP request to the target url
 			response.SendAck(w)
 		}
-		
-		// Make async request in a goroutine (fire and forget)
-		go func() {
-			// Create a new context with timeout to prevent goroutine leaks
-			asyncCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-			defer cancel()
-			
+		RegisterPostResponseHook(r, func() {
 			switch ctx.Route.TargetType {
+
 			case "url":
-				log.Infof(asyncCtx, "Making async request to URL: %s", ctx.Route.URL)
-				if err := makeAsyncRequest(asyncCtx, ctx, httpClient); err != nil {
-					log.Errorf(asyncCtx, err, "Async request failed")
+				log.Infof(ctx, "Making async request to URL: %s", ctx.Route.URL)
+				if err := makeAsyncRequest(ctx, ctx, httpClient); err != nil {
+					log.Errorf(ctx, err, "Async request failed")
 				}
+
 			case "publisher":
 				if pb == nil {
-					log.Errorf(asyncCtx, nil, "Publisher plugin not configured for async operation")
+					log.Errorf(ctx, nil, "Publisher plugin not configured")
 					return
 				}
-				log.Infof(asyncCtx, "Publishing message asynchronously to: %s", ctx.Route.PublisherID)
+				log.Infof(ctx, "Publishing message asynchronously to: %s", ctx.Route.PublisherID)
 				if err := pb.Publish(ctx, ctx.Route.PublisherID, ctx.Body); err != nil {
-					log.Errorf(asyncCtx, err, "Failed to publish message asynchronously")
+					log.Errorf(ctx, err, "Failed to publish message asynchronously")
 				}
-			default:
-				log.Errorf(asyncCtx, nil, "Unknown route type: %s", ctx.Route.TargetType)
 			}
-		}()
+		})
 	}
 }
 
 // makeAsyncRequest makes an HTTP request without blocking the original request
 func makeAsyncRequest(ctx context.Context, stepCtx *model.StepContext, httpClient *http.Client) error {
 	target := stepCtx.Route.URL
-	
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, target.String(), bytes.NewReader(stepCtx.Body))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
-	
+
 	// Copy relevant headers from original request
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Forwarded-Host", stepCtx.Route.URL.Host)
-	
+
 	log.Request(ctx, req, stepCtx.Body)
-	
+
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to execute request: %w", err)
 	}
 	defer resp.Body.Close()
-	
-	// Log response for debugging
-	if resp.StatusCode >= 400 {
-		body, _ := io.ReadAll(resp.Body)
-		log.Warnf(ctx, "Async request returned error status %d: %s", resp.StatusCode, string(body))
-	}
-	
+
+	body, _ := io.ReadAll(resp.Body)
+	log.Infof(ctx, "Async request completed with status %d: %s", resp.StatusCode, string(body))
+
 	return nil
 }
 func proxy(ctx *model.StepContext, r *http.Request, w http.ResponseWriter, httpClient *http.Client) {
@@ -314,6 +265,7 @@ func proxy(ctx *model.StepContext, r *http.Request, w http.ResponseWriter, httpC
 }
 
 // loadPlugin is a generic function to load and validate plugins.
+
 func loadPlugin[T any](ctx context.Context, name string, cfg *plugin.Config, mgrFunc func(context.Context, *plugin.Config) (T, error)) (T, error) {
 	var zero T
 	if cfg == nil {
@@ -339,7 +291,7 @@ func loadKeyManager(ctx context.Context, mgr PluginManager, cache definition.Cac
 	if cache == nil {
 		return nil, fmt.Errorf("failed to load KeyManager plugin (%s): Cache plugin not configured", cfg.ID)
 	}
-	
+
 	km, err := mgr.KeyManager(ctx, cache, registry, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load KeyManager plugin (%s): %w", cfg.ID, err)
@@ -379,7 +331,6 @@ func loadOndcWorkbench(ctx context.Context, mgr PluginManager, cache definition.
 	return ow, nil
 }
 
-
 // initPlugins initializes required plugins for the processor.
 func (h *stdHandler) initPlugins(ctx context.Context, mgr PluginManager, cfg *PluginCfg) error {
 	var err error
@@ -410,10 +361,10 @@ func (h *stdHandler) initPlugins(ctx context.Context, mgr PluginManager, cfg *Pl
 	if h.transportWrapper, err = loadPlugin(ctx, "TransportWrapper", cfg.TransportWrapper, mgr.TransportWrapper); err != nil {
 		return err
 	}
-	if h.ondcValidator,err = loadOndcValidator(ctx, mgr, h.cache, cfg.OndcValidator); err != nil {
+	if h.ondcValidator, err = loadOndcValidator(ctx, mgr, h.cache, cfg.OndcValidator); err != nil {
 		return err
 	}
-	if h.ondcWorkbench,err = loadOndcWorkbench(ctx, mgr, h.cache, cfg.OndcWorkbench); err != nil {
+	if h.ondcWorkbench, err = loadOndcWorkbench(ctx, mgr, h.cache, cfg.OndcWorkbench); err != nil {
 		return err
 	}
 

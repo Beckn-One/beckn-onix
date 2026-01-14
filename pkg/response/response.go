@@ -53,6 +53,7 @@ func parseJSONOrDefault(str string) interface{} {
 
 // SendAck sends an acknowledgment response (ACK) to the client.
 func SendAck(w http.ResponseWriter) {
+	log.Infof(context.Background(),"Sending Ack")
 	resp := &model.Response{
 		Message: model.Message{
 			Ack: model.Ack{
@@ -70,6 +71,7 @@ func SendAck(w http.ResponseWriter) {
 		http.Error(w, "failed to write response", http.StatusInternalServerError)
 		return
 	}
+	log.Infof(context.Background(),"Ack sent successfully")
 }
 
 // nack sends a negative acknowledgment (NACK) response with an error message.
