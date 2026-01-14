@@ -109,14 +109,15 @@ func (s *validateSignStep) validateHeaders(ctx *model.StepContext) error {
 		return nil
 	}
 	unauthHeader := fmt.Sprintf("Signature realm=\"%s\",headers=\"(created) (expires) digest\"", ctx.SubID)
-	headerValue := ctx.Request.Header.Get(model.AuthHeaderGateway)
+	headerValue := ctx.Request.Header.Get(model.AuthHeaderSubscriber)
 	if len(headerValue) != 0 {
-		log.Debugf(ctx, "Validating %v Header", model.AuthHeaderGateway)
+		log.Debugf(ctx, "Validating %v Header", model.AuthHeaderSubscriber)
 		if err := s.validate(ctx, headerValue); err != nil {
 			ctx.RespHeader.Set(model.UnaAuthorizedHeaderGateway, unauthHeader)
-			return model.NewSignValidationErr(fmt.Errorf("failed to validate %s: %w", model.AuthHeaderGateway, err))
+			return model.NewSignValidationErr(fmt.Errorf("failed to validate %s: %w", model.AuthHeaderSubscriber, err))
 		}
 	}
+	log.Debugf(ctx, "Header validated successfully for %v", model.AuthHeaderSubscriber)
 	return nil
 }
 

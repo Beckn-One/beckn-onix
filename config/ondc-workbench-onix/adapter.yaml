@@ -21,7 +21,7 @@ pluginManager:
   root: /Users/rudranshsinghal/ondc/dump/plugins
 modules:
   - name: BapTxnReceiver
-    path: /api-service/ONDC:RET10/1.2.5/buyer/
+    path: /api-service/ONDC:RET10/1.2.5/seller/
     handler:
       type: std
       role: bap
@@ -75,7 +75,7 @@ modules:
         - validateSign
         - validateOndcCallSave
   - name: BppTxnReceiver
-    path: /api-service/ONDC:RET10/1.2.5/seller/
+    path: /api-service/ONDC:RET10/1.2.5/buyer/
     handler:
       type: std
       role: bpp
