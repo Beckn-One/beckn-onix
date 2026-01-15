@@ -665,9 +665,20 @@ cache:
     addr: 10.81.192.4:6379
 ```
 
+**Or with TLS enabled:**
+
+```yaml
+cache:
+  id: cache
+  config:
+    addr: redis.example.com:6380
+    use_tls: "true"
+```
+
 **Parameters**:
 
 - `addr`: Redis server address and port
+- `use_tls`: Enable TLS connection to Redis (`"true"` to enable, omit or any other value to disable). Default: disabled.
 
 ---
 
