@@ -1,4 +1,4 @@
-module github.com/ONDC-Official/beckn-onix
+module github.com/ONDC-Official/automation-beckn-onix
 
 go 1.24.0
 
@@ -85,5 +85,6 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
-// replace github.com/beckn-one/beckn-onix => github.com/extedcoud/beckn-onix v0.0.0-20251224081251-0130499ddf85
+// replace github.com/beckn-one/beckn-onix => github.com/ONDC-Official/automation-beckn-onix v1.4.1
+
 replace github.com/beckn-one/beckn-onix => ./
