@@ -1,6 +1,6 @@
 module github.com/ONDC-Official/automation-beckn-onix
 
-go 1.24.0
+go 1.25.5
 
 require (
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
@@ -85,6 +85,6 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
-// replace github.com/beckn-one/beckn-onix => github.com/ONDC-Official/automation-beckn-onix v1.4.1
+replace github.com/beckn-one/beckn-onix => github.com/ONDC-Official/automation-beckn-onix v1.4.0
 
-replace github.com/beckn-one/beckn-onix => ./
+// replace github.com/beckn-one/beckn-onix => ./
