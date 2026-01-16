@@ -1,4 +1,4 @@
-FROM golang:1.25.5-bullseye AS builder
+FROM golang:1.25.5 AS builder
 
 WORKDIR /workspace/app
 COPY cmd/adapter  ./cmd/adapter
