@@ -140,6 +140,7 @@ func TestLookup(t *testing.T) {
 						"signing_public_key": "384qqkIIpxo71WaJPsWqQNWUDGAFnfnJPxuDmtuBiLo=",
 						"encr_public_key":    "test-encr-key",
 					},
+					"parent_namespaces": []string{"commerce-network.org", "local-commerce.org"},
 					"created_at": "2025-10-27T11:45:27.963Z",
 					"updated_at": "2025-10-27T11:46:23.563Z",
 				},
@@ -188,6 +189,94 @@ func TestLookup(t *testing.T) {
 
 		if subscription.KeyID != "test-key-id" {
 			t.Errorf("Expected keyID test-key-id, got %s", subscription.KeyID)
+		}
+	})
+
+	t.Run("allowed parent namespaces match", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			response := map[string]interface{}{
+				"message": "Record retrieved from registry cache",
+				"data": map[string]interface{}{
+					"details": map[string]interface{}{
+						"url":                "http://dev.np2.com/beckn/bap",
+						"type":               "BAP",
+						"domain":             "energy",
+						"subscriber_id":      "dev.np2.com",
+						"signing_public_key": "384qqkIIpxo71WaJPsWqQNWUDGAFnfnJPxuDmtuBiLo=",
+					},
+					"parent_namespaces": []string{"commerce-network.org", "local-commerce.org"},
+				},
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(response)
+		}))
+		defer server.Close()
+
+		config := &Config{
+			URL:                     server.URL + "/dedi",
+			RegistryName:            "subscribers.beckn.one",
+			AllowedParentNamespaces: []string{"commerce-network.org"},
+		}
+
+		client, closer, err := New(ctx, config)
+		if err != nil {
+			t.Fatalf("New() error = %v", err)
+		}
+		defer closer()
+
+		req := &model.Subscription{
+			Subscriber: model.Subscriber{
+				SubscriberID: "dev.np2.com",
+			},
+			KeyID: "test-key-id",
+		}
+		_, err = client.Lookup(ctx, req)
+		if err != nil {
+			t.Errorf("Lookup() error = %v", err)
+		}
+	})
+
+	t.Run("allowed parent namespaces mismatch", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			response := map[string]interface{}{
+				"message": "Record retrieved from registry cache",
+				"data": map[string]interface{}{
+					"details": map[string]interface{}{
+						"url":                "http://dev.np2.com/beckn/bap",
+						"type":               "BAP",
+						"domain":             "energy",
+						"subscriber_id":      "dev.np2.com",
+						"signing_public_key": "384qqkIIpxo71WaJPsWqQNWUDGAFnfnJPxuDmtuBiLo=",
+					},
+					"parent_namespaces": []string{"local-commerce.org"},
+				},
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(response)
+		}))
+		defer server.Close()
+
+		config := &Config{
+			URL:                     server.URL + "/dedi",
+			RegistryName:            "subscribers.beckn.one",
+			AllowedParentNamespaces: []string{"commerce-network.org"},
+		}
+
+		client, closer, err := New(ctx, config)
+		if err != nil {
+			t.Fatalf("New() error = %v", err)
+		}
+		defer closer()
+
+		req := &model.Subscription{
+			Subscriber: model.Subscriber{
+				SubscriberID: "dev.np2.com",
+			},
+			KeyID: "test-key-id",
+		}
+		_, err = client.Lookup(ctx, req)
+		if err == nil {
+			t.Error("Expected error for disallowed parent namespaces, got nil")
 		}
 	})
 

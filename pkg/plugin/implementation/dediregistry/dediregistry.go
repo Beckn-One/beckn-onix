@@ -15,12 +15,13 @@ import (
 
 // Config holds configuration parameters for the DeDi registry client.
 type Config struct {
-	URL          string        `yaml:"url" json:"url"`
-	RegistryName string        `yaml:"registryName" json:"registryName"`
-	Timeout      int           `yaml:"timeout" json:"timeout"`
-	RetryMax     int           `yaml:"retry_max" json:"retry_max"`
-	RetryWaitMin time.Duration `yaml:"retry_wait_min" json:"retry_wait_min"`
-	RetryWaitMax time.Duration `yaml:"retry_wait_max" json:"retry_wait_max"`
+	URL                     string        `yaml:"url" json:"url"`
+	RegistryName            string        `yaml:"registryName" json:"registryName"`
+	AllowedParentNamespaces []string      `yaml:"allowedParentNamespaces" json:"allowedParentNamespaces"`
+	Timeout                 int           `yaml:"timeout" json:"timeout"`
+	RetryMax                int           `yaml:"retry_max" json:"retry_max"`
+	RetryWaitMin            time.Duration `yaml:"retry_wait_min" json:"retry_wait_min"`
+	RetryWaitMax            time.Duration `yaml:"retry_wait_max" json:"retry_wait_max"`
 }
 
 // DeDiRegistryClient encapsulates the logic for calling the DeDi registry endpoints.
@@ -151,6 +152,13 @@ func (c *DeDiRegistryClient) Lookup(ctx context.Context, req *model.Subscription
 		return nil, fmt.Errorf("invalid response format: missing details field")
 	}
 
+	parentNamespaces := extractStringSlice(data["parent_namespaces"])
+	if len(c.config.AllowedParentNamespaces) > 0 {
+		if len(parentNamespaces) == 0 || !containsAny(parentNamespaces, c.config.AllowedParentNamespaces) {
+			return nil, fmt.Errorf("registry entry not in allowed parent namespaces")
+		}
+	}
+
 	// Extract required fields from details
 	signingPublicKey, ok := details["signing_public_key"].(string)
 	if !ok || signingPublicKey == "" {
@@ -199,4 +207,47 @@ func parseTime(timeStr string) time.Time {
 		return time.Time{}
 	}
 	return parsedTime
+}
+
+func extractStringSlice(value interface{}) []string {
+	if value == nil {
+		return nil
+	}
+	switch v := value.(type) {
+	case []string:
+		return v
+	case []interface{}:
+		out := make([]string, 0, len(v))
+		for _, item := range v {
+			str, ok := item.(string)
+			if !ok {
+				continue
+			}
+			if str != "" {
+				out = append(out, str)
+			}
+		}
+		return out
+	default:
+		return nil
+	}
+}
+
+func containsAny(values []string, allowed []string) bool {
+	if len(values) == 0 || len(allowed) == 0 {
+		return false
+	}
+	allowedSet := make(map[string]struct{}, len(allowed))
+	for _, entry := range allowed {
+		if entry == "" {
+			continue
+		}
+		allowedSet[entry] = struct{}{}
+	}
+	for _, value := range values {
+		if _, ok := allowedSet[value]; ok {
+			return true
+		}
+	}
+	return false
 }
