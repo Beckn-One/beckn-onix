@@ -120,6 +120,7 @@ The **Beckn Protocol** is an open protocol that enables location-aware, local co
 #### 3. **Plugin Types**
 - **Cache**: Redis-based response caching 
 - **Router**: YAML-based routing rules engine for request forwarding (supports domain-agnostic routing for Beckn v2.x.x)
+- **Registry**: Standard Beckn registry or Beckn One DeDi registry lookup for participant information
 - **Signer**: Ed25519 digital signature creation for outgoing requests
 - **SignValidator**: Ed25519 signature validation for incoming requests
 - **SchemaValidator**: JSON schema validation
@@ -131,7 +132,8 @@ The **Beckn Protocol** is an open protocol that enables location-aware, local co
 - **Decrypter**: AES decryption for encrypted data processing
 - **ReqPreprocessor**: Request preprocessing (UUID generation, headers)
 - **ReqMapper**: Middleware to transform payload either between Beckn versions or against other platforms.
-- **Registry**: Standard Beckn registry or Beckn One DeDi registry lookup for participant information
+- **OtelSetup**: Observability Setup to make metrics, traces and logs available
+
 
 ## Quick Start
 
