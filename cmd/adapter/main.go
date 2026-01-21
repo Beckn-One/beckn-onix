@@ -18,6 +18,7 @@ import (
 	"github.com/beckn-one/beckn-onix/pkg/log"
 	"github.com/beckn-one/beckn-onix/pkg/plugin"
 	"github.com/beckn-one/beckn-onix/pkg/telemetry"
+	_ "go.uber.org/automaxprocs"
 )
 
 // ApplicationPlugins holds application-level plugin configurations.
