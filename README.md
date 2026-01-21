@@ -68,20 +68,6 @@ The **Beckn Protocol** is an open protocol that enables location-aware, local co
 - **Runtime Instrumentation**: Go runtime + Redis client metrics included
 - **Health Checks**: Liveness and readiness probes for Kubernetes
 
-#### Monitoring Quick Start
-```bash
-./install/build-plugins.sh
-go build -o beckn-adapter ./cmd/adapter
-./beckn-adapter --config=config/local-simple.yaml
-cd monitoring && docker-compose -f docker-compose-monitoring.yml up -d
-open http://localhost:3000 # Grafana (admin/admin)
-```
-Resources:
-- `monitoring/prometheus.yml` – scrape config
-- `monitoring/prometheus-alerts.yml` – alert rules (RED, cache, step, plugin)
-- `monitoring/grafana/dashboards/beckn-onix-overview.json` – curated dashboard
-- `docs/METRICS_RUNBOOK.md` – runbook with PromQL recipes & troubleshooting
-
 ### 🌐 **Multi-Domain Support**
 - **Retail & E-commerce**: Product search, order management, fulfillment tracking
 - **Mobility Services**: Ride-hailing, public transport, vehicle rentals
