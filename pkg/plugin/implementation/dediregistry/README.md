@@ -18,6 +18,7 @@ registry:
   config:
     url: "https://dedi-wrapper.example.com/dedi"
     registryName: "subscribers.beckn.one"
+    allowedParentNamespaces: "commerce-network.org,retail-collective.org"
     timeout: 30
     retry_max: 3
     retry_wait_min: 1s
@@ -30,6 +31,7 @@ registry:
 |-----------|----------|-------------|---------|
 | `url` | Yes | DeDi wrapper API base URL (include /dedi path) | - |
 | `registryName` | Yes | Registry name for lookup path | - |
+| `allowedParentNamespaces` | No | Allowlist of parent namespace domains for signature validation | - |
 | `timeout` | No | Request timeout in seconds | Client default |
 | `retry_max` | No | Maximum number of retry attempts | 4 (library default) |
 | `retry_wait_min` | No | Minimum wait time between retries (e.g., "1s", "500ms") | 1s (library default) |
@@ -62,6 +64,7 @@ GET {url}/lookup/{subscriber_id}/{registryName}/{key_id}
       "signing_public_key": "384qqkIIpxo71WaJPsWqQNWUDGAFnfnJPxuDmtuBiLo=",
       "encr_public_key": "test-encr-key"
     },
+    "parent_namespaces": ["commerce-network.org", "local-commerce.org"],
     "created_at": "2025-10-27T11:45:27.963Z",
     "updated_at": "2025-10-27T11:46:23.563Z"
   }

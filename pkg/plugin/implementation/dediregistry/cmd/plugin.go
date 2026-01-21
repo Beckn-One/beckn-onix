@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strconv"
+	"strings"
 
 	"github.com/beckn-one/beckn-onix/pkg/log"
 	"github.com/beckn-one/beckn-onix/pkg/plugin/definition"
@@ -34,6 +35,10 @@ func (d dediRegistryProvider) New(ctx context.Context, config map[string]string)
 		}
 	}
 
+	if rawNamespaces, exists := config["allowedParentNamespaces"]; exists && rawNamespaces != "" {
+		dediConfig.AllowedParentNamespaces = parseAllowedParentNamespaces(rawNamespaces)
+	}
+
 	log.Debugf(ctx, "DeDi Registry config mapped: %+v", dediConfig)
 
 	dediClient, closer, err := dediregistry.New(ctx, dediConfig)
@@ -44,6 +49,19 @@ func (d dediRegistryProvider) New(ctx context.Context, config map[string]string)
 
 	log.Infof(ctx, "DeDi Registry instance created successfully")
 	return dediClient, closer, nil
+}
+
+func parseAllowedParentNamespaces(raw string) []string {
+	parts := strings.Split(raw, ",")
+	namespaces := make([]string, 0, len(parts))
+	for _, part := range parts {
+		item := strings.TrimSpace(part)
+		if item == "" {
+			continue
+		}
+		namespaces = append(namespaces, item)
+	}
+	return namespaces
 }
 
 // Provider is the exported plugin instance
