@@ -152,13 +152,6 @@ func (c *DeDiRegistryClient) Lookup(ctx context.Context, req *model.Subscription
 		return nil, fmt.Errorf("invalid response format: missing details field")
 	}
 
-	parentNamespaces := extractStringSlice(data["parent_namespaces"])
-	if len(c.config.AllowedParentNamespaces) > 0 {
-		if len(parentNamespaces) == 0 || !containsAny(parentNamespaces, c.config.AllowedParentNamespaces) {
-			return nil, fmt.Errorf("registry entry not in allowed parent namespaces")
-		}
-	}
-
 	// Extract required fields from details
 	signingPublicKey, ok := details["signing_public_key"].(string)
 	if !ok || signingPublicKey == "" {
@@ -170,6 +163,14 @@ func (c *DeDiRegistryClient) Lookup(ctx context.Context, req *model.Subscription
 	detailsType, _ := details["type"].(string)
 	detailsDomain, _ := details["domain"].(string)
 	detailsSubscriberID, _ := details["subscriber_id"].(string)
+
+	// Validate parent namespaces if configured
+	parentNamespaces := extractStringSlice(data["parent_namespaces"])
+	if len(c.config.AllowedParentNamespaces) > 0 {
+		if len(parentNamespaces) == 0 || !containsAny(parentNamespaces, c.config.AllowedParentNamespaces) {
+			return nil, fmt.Errorf("registry entry with subscriber_id '%s' does not belong to any configured parent namespaces (registry.config.allowedParentNamespaces)", detailsSubscriberID)
+		}
+	}
 
 	// Extract encr_public_key if available (optional field)
 	encrPublicKey, _ := details["encr_public_key"].(string)
