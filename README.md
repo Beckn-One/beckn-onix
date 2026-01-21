@@ -64,29 +64,8 @@ The **Beckn Protocol** is an open protocol that enables location-aware, local co
 ### 📊 **Observability**
 - **Structured Logging**: JSON-formatted logs with contextual information
 - **Transaction Tracking**: End-to-end request tracing with unique IDs
-- **OpenTelemetry Metrics**: Pull-based metrics exposed via `/metrics`
-  - RED metrics for every module and action (rate, errors, duration)
-  - Per-step histograms with error attribution
-  - Cache, routing, plugin, and business KPIs (signature/schema validations, Beckn messages)
-  - Native Prometheus exporter with Grafana dashboards & alert rules (`monitoring/`)
-  - Opt-in: add a `plugins.otelsetup` block in your config to wire the `otelsetup` plugin; omit it to run without metrics. Example:
-
-    ```yaml
-    plugins:
-      otelsetup:
-        id: otelsetup
-        config:
-          serviceName: "beckn-onix"
-          serviceVersion: "1.0.0"
-          enableMetrics: "true"
-          environment: "development"
-    ```
-  - **Modular Metrics Architecture**: Metrics are organized by module for better maintainability:
-    - OTel SDK wiring via `otelsetup` plugin
-    - Step execution metrics in `telemetry` package
-    - Handler metrics (signature, schema, routing) in `handler` module
-    - Cache metrics in `cache` plugin
-- **Runtime Instrumentation**: Go runtime + Redis client metrics baked in
+- **OpenTelemetry Metrics**: Performance and business metrics collection
+- **Runtime Instrumentation**: Go runtime + Redis client metrics included
 - **Health Checks**: Liveness and readiness probes for Kubernetes
 
 #### Monitoring Quick Start
