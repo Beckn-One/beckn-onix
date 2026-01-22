@@ -57,7 +57,16 @@ spec:
               mountPath: "/registry/overrideProperties/config/swf.properties"
               subPath: swf.properties
               readOnly: true
+            - name: registry-database
+              mountPath: "/registry/database"
+            - name: registry-logs
+              mountPath: "/registry/tmp"
       volumes:
         - name: registry-config
           configMap:
             name: {{ include "common.name" . }}-config
+        - name: registry-database
+          persistentVolumeClaim:
+            claimName: {{ include "common.name" . }}-database
+        - name: registry-logs
+          emptyDir: {}

@@ -84,10 +84,16 @@ autoscaling:
 
 # Registry AWS RDS Postgres connection details
 database:
-  host: 
+  host: ""
   dbname: registry
   username: postgres
-  password:
+  password: ""
+
+storage:
+  # Size of the persistent volume for the embedded H2 database files
+  databaseSize: 10Gi
+  # StorageClass to use for the PVC (gp2 is common on EKS)
+  storageClass: gp2
 
 nodeSelector: {}
 

@@ -6,7 +6,6 @@ import { Construct } from 'constructs';
 import { ConfigProps } from './config';
 import * as crypto from 'crypto';
 
-
 interface HelmCommonServicesStackProps extends StackProps {
     config: ConfigProps;
     eksCluster: eks.Cluster;
@@ -22,11 +21,7 @@ export class HelmCommonServicesStack extends Stack {
         const repository = "https://charts.bitnami.com/bitnami";
         const namespace = props.config.NAMESPACE;
 
-        const generateRandomPassword = (length: number) => {
-            return crypto.randomBytes(length).toString('hex').slice(0, length);
-        };
-        const rabbitMQPassword = generateRandomPassword(12);
-
+        // Redis - Using Amazon ECR Public
         new helm.HelmChart(this, "RedisHelmChart", {
             cluster: eksCluster,
             chart: "redis",
@@ -34,7 +29,13 @@ export class HelmCommonServicesStack extends Stack {
             release: "redis",
             wait: false,
             repository: repository,
+            version: "19.5.5",
             values: {
+                image: {
+                    registry: "public.ecr.aws",
+                    repository: "bitnami/redis",
+                    tag: "7.2.5"
+                },
                 auth: {
                     enabled: false
                 },
@@ -49,20 +50,7 @@ export class HelmCommonServicesStack extends Stack {
             }
         });
 
-        new helm.HelmChart(this, "MongoDBHelmChart", {
-            cluster: eksCluster,
-            chart: "mongodb",
-            namespace: service + namespace,
-            release: "mongodb",
-            wait: false,
-            repository: repository,
-            values: {
-                persistence: {
-                    storageClass: "gp2"
-                }
-            }
-        });
-
+        // RabbitMQ - Using Amazon ECR Public
         new helm.HelmChart(this, "RabbitMQHelmChart", {
             cluster: eksCluster,
             chart: "rabbitmq",
@@ -70,7 +58,13 @@ export class HelmCommonServicesStack extends Stack {
             release: "rabbitmq",
             wait: false,
             repository: repository,
+            version: "15.0.1",
             values: {
+                image: {
+                    registry: "public.ecr.aws",
+                    repository: "bitnami/rabbitmq",
+                    tag: "3.13.7"
+                },
                 persistence: {
                     enabled: true,
                     storageClass: "gp2"
@@ -81,10 +75,5 @@ export class HelmCommonServicesStack extends Stack {
                 }
             }
         });
-
-        // new cdk.CfnOutput(this, String("RabbimqPassword"), {
-        //     value: rabbitMQPassword,
-        // });
-
     }
 }

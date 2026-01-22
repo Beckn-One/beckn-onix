@@ -1,0 +1,22 @@
+routingRules:
+  - domain: "beckn.one:deg:ev-charging:2.0.0"  # Retail domain
+    version: "2.0.0"
+    targetType: "bpp"
+    endpoints:
+      - select
+      - init
+      - confirm
+      - status
+      - track
+      - cancel
+      - update
+      - rating
+      - support
+
+  - domain: "beckn.one:deg:ev-charging:2.0.0"  # Retail domain
+    version: "2.0.0"
+    targetType: "url"
+    target:
+      url: "https://34.93.141.21.sslip.io/beckn"
+    endpoints:
+      - discover

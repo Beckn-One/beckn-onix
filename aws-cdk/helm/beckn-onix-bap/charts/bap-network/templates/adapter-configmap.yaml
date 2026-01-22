@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "common.name" . }}-adapter-config
+  namespace: {{ .Values.global.namespace }}
+data:
+  local-beckn-one-bap.yaml: |
+{{ .Files.Get "config/local-beckn-one-bap.yaml" | indent 4 }}
+
+  local-beckn-one-bpp.yaml: |
+{{ .Files.Get "config/local-beckn-one-bpp.yaml" | indent 4 }}
+
+  local-beckn-one-routing-BAPCaller.yaml: |
+{{ .Files.Get "config/local-beckn-one-routing-BAPCaller.yaml" | indent 4 }}
+
+  local-beckn-one-routing-BAPReceiver.yaml: |
+{{ .Files.Get "config/local-beckn-one-routing-BAPReceiver.yaml" | indent 4 }}
+
+  local-beckn-one-routing-BPPCaller.yaml: |
+{{ .Files.Get "config/local-beckn-one-routing-BPPCaller.yaml" | indent 4 }}
+
+  local-beckn-one-routing-BPPReceiver.yaml: |
+{{ .Files.Get "config/local-beckn-one-routing-BPPReceiver.yaml" | indent 4 }}
+

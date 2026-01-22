@@ -5,13 +5,18 @@ import { Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { ConfigProps } from './config';
 
-  interface HelmRegistryStackProps extends StackProps {
-    config: ConfigProps;
-    eksCluster: eks.Cluster;
-    rdsHost: string;
-    rdsPassword: string;
+interface HelmRegistryStackProps extends StackProps {
+  config: ConfigProps;
+  eksCluster: eks.Cluster;
 }
 
+/**
+ * Deploys the beckn-onix-registry Helm chart.
+ *
+ * NOTE: This stack no longer depends on Aurora/Postgres. The registry
+ * now uses an embedded H2 database on its own persistent volume, as
+ * configured in the Helm chart's swf.properties and PVC templates.
+ */
 export class HelmRegistryStack extends Stack {
   constructor(scope: Construct, id: string, props: HelmRegistryStackProps) {
     super(scope, id, props);
@@ -22,29 +27,20 @@ export class HelmRegistryStack extends Stack {
     const releaseName = props.config.REGISTRY_RELEASE_NAME;
     const repository = props.config.REPOSITORY;
 
-    const rdsHost = props.rdsHost;
-    const rdsPassword = props.rdsPassword;
-
-    new helm.HelmChart(this, "registryhelm", {
-        cluster: eksCluster,
-        chart: "beckn-onix-registry",
-        release: releaseName,
-        wait: false,
-        repository: repository,
-        values: {
-                externalDomain: externalDomain,
-                database: {
-                    host: rdsHost,
-                    password: rdsPassword
-                },
-                ingress: {
-                    tls: 
-                    {
-                        certificateArn: certArn,
-                    },
-                },
-        }
-
+    new helm.HelmChart(this, 'registryhelm', {
+      cluster: eksCluster,
+      chart: 'beckn-onix-registry',
+      release: releaseName,
+      wait: false,
+      repository: repository,
+      values: {
+        externalDomain: externalDomain,
+        ingress: {
+          tls: {
+            certificateArn: certArn,
+          },
+        },
+      },
     });
   }
 }

@@ -4,9 +4,7 @@ import * as helm from 'aws-cdk-lib/aws-eks';
 import { Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { ConfigProps } from './config';
-import * as efs from 'aws-cdk-lib/aws-efs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import * as iam from 'aws-cdk-lib/aws-iam';
 
 
 interface HelmBapStackProps extends StackProps {
@@ -32,28 +30,6 @@ export class HelmBapStack extends Stack {
 
     const isSandbox = props.isSandbox;
 
-    const myFileSystemPolicy = new iam.PolicyDocument({
-      statements: [new iam.PolicyStatement({
-        actions: [
-          'elasticfilesystem:ClientRootAccess',
-          'elasticfilesystem:ClientWrite',
-          'elasticfilesystem:ClientMount',
-        ],
-        principals: [new iam.ArnPrincipal('*')],
-        resources: ['*'],
-        conditions: {
-          Bool: {
-            'elasticfilesystem:AccessedViaMountTarget': 'true',
-          },
-        },
-      })],
-    });
-
-    const efsBapFileSystemId = new efs.FileSystem(this, 'Beckn-Onix-Bap', {
-      vpc: props.vpc,
-      securityGroup: props.eksSecGrp,
-      fileSystemPolicy: myFileSystemPolicy,
-    });
     
     new helm.HelmChart(this, 'baphelm', {
       cluster: eksCluster,
@@ -70,9 +46,6 @@ export class HelmBapStack extends Stack {
             privateKey: bapPrivateKey,
             publicKey: bapPublicKey,
           },
-          efs: {
-            fileSystemId: efsBapFileSystemId.fileSystemId,
-          },
           ingress: {
             tls: {
               certificateArn: certArn,
@@ -83,8 +56,5 @@ export class HelmBapStack extends Stack {
   }
 );
     
-    new cdk.CfnOutput(this, String("EksFileSystemId"), {
-        value: efsBapFileSystemId.fileSystemId,
-    });
   }
 }

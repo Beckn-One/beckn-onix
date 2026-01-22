@@ -83,12 +83,18 @@ autoscaling:
 
 # Gateway AWS RDS Postgres connection details
 database:
-  host: 
+  host: ""
   dbname: gateway
   username: postgres
-  password:
+  password: ""
 
 registry_url: 
+
+storage:
+  # Size of the persistent volume for the embedded H2 database files
+  databaseSize: 10Gi
+  # StorageClass to use for the PVC (gp2 is common on EKS)
+  storageClass: gp2
 
 nodeSelector: {}
 
@@ -98,4 +104,3 @@ affinity: {}
 
 # Gateway external domain/sub-domain value. Supply the actual value during Helm install "--set externalDomain=<domain-name>"
 externalDomain:
-

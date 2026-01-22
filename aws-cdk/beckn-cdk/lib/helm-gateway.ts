@@ -5,15 +5,20 @@ import { Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { ConfigProps } from './config';
 
-interface HelmGAtewayStackProps extends cdk.StackProps {
-    config: ConfigProps;
-    eksCluster: eks.Cluster;
-    rdsHost: string;
-    rdsPassword: string;
-  }
+interface HelmGatewayStackProps extends cdk.StackProps {
+  config: ConfigProps;
+  eksCluster: eks.Cluster;
+}
 
+/**
+ * Deploys the beckn-onix-gateway Helm chart.
+ *
+ * NOTE: This stack no longer depends on Aurora/Postgres. The gateway
+ * now uses an embedded H2 database on its own persistent volume, as
+ * configured in the Helm chart's swf.properties and PVC templates.
+ */
 export class HelmGatewayStack extends Stack {
-  constructor(scope: Construct, id: string, props: HelmGAtewayStackProps) {
+  constructor(scope: Construct, id: string, props: HelmGatewayStackProps) {
     super(scope, id, props);
 
     const eksCluster = props.eksCluster;
@@ -24,31 +29,21 @@ export class HelmGatewayStack extends Stack {
     const releaseName = props.config.GATEWAY_RELEASE_NAME;
     const repository = props.config.REPOSITORY;
 
-    const rdsHost = props.rdsHost;
-    const rdsPassword = props.rdsPassword;
-
-    new helm.HelmChart(this, "gatewayhelm", {
-        cluster: eksCluster,
-        chart: "beckn-onix-gateway",
-        release: releaseName,
-        wait: false,
-        repository: repository,
-        values: {
-            externalDomain: externalDomain,
-            registry_url: registryUrl,
-            database: {
-                host: rdsHost,
-                password: rdsPassword,
-            },
-            ingress: {
-                tls: 
-                {
-                    certificateArn: certArn,
-                },
-            },
-        }
-
+    new helm.HelmChart(this, 'gatewayhelm', {
+      cluster: eksCluster,
+      chart: 'beckn-onix-gateway',
+      release: releaseName,
+      wait: false,
+      repository: repository,
+      values: {
+        externalDomain: externalDomain,
+        registry_url: registryUrl,
+        ingress: {
+          tls: {
+            certificateArn: certArn,
+          },
+        },
+      },
     });
-
   }
 }

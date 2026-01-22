@@ -31,17 +31,6 @@
           "required": ["tls"],
           "description": "Ingress-related configuration."
         },
-        "efs": {
-          "type": "object",
-          "properties": {
-            "fileSystemId": {
-              "type": "string",
-              "description": "The EFS FileSystem ID."
-            }
-          },
-          "required": ["fileSystemId"],
-          "description": "EFS-related configuration."
-        },
         "bpp": {
           "type": "object",
           "properties": {
@@ -62,7 +51,6 @@
         "externalDomain",
         "registry_url",
         "ingress",
-        "efs",
         "bpp"
       ]
     }

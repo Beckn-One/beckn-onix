@@ -4,7 +4,6 @@ import { StackProps } from 'aws-cdk-lib';
 import { ConfigProps, getConfig } from '../lib/config';
 
 import { VpcStack } from '../lib/vpc-stack';
-import { RdsStack } from '../lib/rds-stack';
 import { EksStack } from '../lib/eks-stack';
 import { RedisStack } from '../lib/redis-stack';
 import { DocumentDbStack } from '../lib/documentdb-stack';
@@ -38,15 +37,11 @@ const env = { account: accountId, region: region };
 
 // Function to deploy registry environment
 const deployRegistry = () => {
-  var envC = "registry";
   const vpcStack = new VpcStack(app, 'RegistryVpcStack', { config: config, env });
   const eksStack = new EksStack(app, 'RegistryEksStack', { config: config, vpc: vpcStack.vpc, env });
-  const rdsStack = new RdsStack(app, 'RegistryRdsStack', { config: config, vpc: vpcStack.vpc, envC: envC, env });
 
   new HelmRegistryStack(app, 'HelmRegistryStack', {
     config: config,
-    rdsHost: rdsStack.rdsHost,
-    rdsPassword: rdsStack.rdsPassword,
     eksCluster: eksStack.cluster,
     env,
   });
@@ -54,15 +49,11 @@ const deployRegistry = () => {
 
 // Function to deploy gateway environment
 const deployGateway = () => {
-  var envC = "gateway";
   const vpcStack = new VpcStack(app, 'GatewayVpcStack', { config: config, env });
   const eksStack = new EksStack(app, 'GatewayEksStack', { config: config, vpc: vpcStack.vpc, env });
-  const rdsStack = new RdsStack(app, 'GatewayRdsStack', { config: config, vpc: vpcStack.vpc, envC: envC, env });
 
   new HelmGatewayStack(app, 'HelmGatewayStack', {
     config: config,
-    rdsHost: rdsStack.rdsHost,
-    rdsPassword: rdsStack.rdsPassword,
     eksCluster: eksStack.cluster,
     env,
   });
@@ -118,23 +109,17 @@ const deployBPP = () => {
 
 // Function to deploy sandbox environment (all stacks)
 const deploySandbox = () => {
-  var envC = "sandbox";
   const vpcStack = new VpcStack(app, 'VpcStack', {config: config, env });
   const eksStack = new EksStack(app, 'EksStack', {config: config, vpc: vpcStack.vpc, env });
-  const rdsStack = new RdsStack(app, 'RdsStack', { config: config, vpc: vpcStack.vpc, envC: envC, env });
   
   new HelmRegistryStack(app, 'HelmRegistryStack', {
     config: config,
-    rdsHost: rdsStack.rdsHost,
-    rdsPassword: rdsStack.rdsPassword,
     eksCluster: eksStack.cluster,
     env,
   });
 
   new HelmGatewayStack(app, 'HelmGatewayStack', {
     config: config,
-    rdsHost: rdsStack.rdsHost,
-    rdsPassword: rdsStack.rdsPassword,
     eksCluster: eksStack.cluster,
     env,
   });

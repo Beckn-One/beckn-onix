@@ -61,6 +61,10 @@ spec:
               mountPath: "/gateway/overrideProperties/config/networks/onix.json"
               subPath: onix.json
               readOnly: true
+            - name: gateway-database
+              mountPath: "/gateway/database"
+            - name: gateway-logs
+              mountPath: "/gateway/tmp"
       volumes:
         - name: gateway-config
           configMap:
@@ -68,3 +72,8 @@ spec:
         - name: onixjson-config
           configMap:
             name: {{ include "common.name" . }}-onixjson-config
+        - name: gateway-database
+          persistentVolumeClaim:
+            claimName: {{ include "common.name" . }}-database
+        - name: gateway-logs
+          emptyDir: {}

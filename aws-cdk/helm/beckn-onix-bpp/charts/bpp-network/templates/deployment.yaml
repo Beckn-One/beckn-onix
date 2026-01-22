@@ -33,14 +33,6 @@ spec:
       serviceAccountName: {{ include "common.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
-      initContainers:
-        - name: retain-schemas-content-ebs-volume
-          image: {{ .Values.global.image.repository }}
-          imagePullPolicy: {{ .Values.global.image.pullPolicy }}
-          command: ['sh', '-c', 'cp -r /usr/src/app/schemas/* /mnt/schemas/']
-          volumeMounts:
-            - name: bpp-schemas-efs-volume
-              mountPath: /mnt/schemas
       containers:
         - name: {{ .Chart.Name }}
           image: {{ .Values.global.image.repository }}
@@ -49,6 +41,31 @@ spec:
             - name: bpp-net-port
               containerPort: {{ .Values.service.port }}
               protocol: TCP
+
+          env:
+            # Use the baked-in local-beckn-one-bpp.yaml config inside the adapter image.
+            - name: CONFIG_FILE
+              value: "/app/config/local-beckn-one-bpp.yaml"
+
+            - name: VAULT_ADDR
+              value: "http://vault:8200"
+            - name: VAULT_TOKEN
+              value: "root"
+
+            - name: REDIS_ADDR
+              value: "{{ .Values.global.redisCache.host }}:{{ .Values.global.redisCache.port }}"
+
+            - name: RABBITMQ_ADDR
+              value: "{{ .Values.global.rabbitMQamqp.host }}:{{ .Values.global.rabbitMQamqp.port }}"
+            - name: RABBITMQ_USER
+              value: "{{ .Values.global.rabbitMQamqp.username }}"
+            - name: RABBITMQ_PASS
+              value: "{{ if .Values.global.rabbitMQamqp.password }}{{ .Values.global.rabbitMQamqp.password }}{{ else }}{{ include "getSecretValue" (dict "secretName" "rabbitmq" "namespace" "bpp-common-services" "key" "rabbitmq-password") }}{{ end }}"
+
+          # Align container entrypoint with docker-compose: ./server --config=/app/config/local-beckn-one-bpp.yaml
+          command: ["./server"]
+          args: ["--config=/app/config/local-beckn-one-bpp.yaml"]
+
           {{- if .Values.livenessProbe }}
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
@@ -60,13 +77,17 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
+            # ConfigMap-based default.yaml is currently unused by the adapter,
+            # which relies on the baked local-beckn-one-bpp.yaml config. We keep
+            # this mount for backward compatibility but it is not referenced by CONFIG_FILE.
             - name: bpp-network-config
               mountPath: "/usr/src/app/config/default.yaml"
               subPath: default.yaml
               readOnly: true
-            # EFS volumes for L2 schemas 
-            - name: bpp-schemas-efs-volume
-              mountPath: /usr/src/app/schemas
+            # Full ONIX adapter config folder
+            - name: bpp-adapter-config
+              mountPath: "/app/config"
+              readOnly: true
             # EBS volumes for logs
             - name: bpp-network-logs-ebs-volume
               mountPath: /usr/src/app/logs
@@ -74,9 +95,9 @@ spec:
         - name: bpp-network-config
           configMap:
             name: {{ include "common.name" . }}-config
-        - name: bpp-schemas-efs-volume
-          persistentVolumeClaim:
-            claimName: beckn-onix-bpp-efs-pvc
+        - name: bpp-adapter-config
+          configMap:
+            name: {{ include "common.name" . }}-adapter-config
         - name: bpp-network-logs-ebs-volume
           persistentVolumeClaim:
             claimName: {{ include "common.name" . }}-logs-pvc

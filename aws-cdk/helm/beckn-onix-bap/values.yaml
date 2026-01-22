@@ -3,9 +3,9 @@
 # Declare variables to be passed into your templates.
 
 global:
-  namespace: beckn-onix-bap
+  namespace: bap-onix
   image:
-    repository: fidedocker/protocol-server
+    repository: fidedocker/onix-adapter
     pullPolicy: IfNotPresent
     # Overrides the image tag whose default is the chart appVersion.
     # tag: ""
@@ -14,14 +14,6 @@ global:
   redisCache:
     host: redis-master.bap-common-services.svc.cluster.local
     port: 6379
-
-# Mongodb connection details
-  responseCacheMongo:
-    host: mongodb.bap-common-services.svc.cluster.local
-    port: 27017
-    dbname: protocol_server
-    username: root
-    password: 
 
 # RabbitMQ connection details
   rabbitMQamqp:
@@ -60,4 +52,3 @@ global:
   tolerations: []
 
   affinity: {}
-      

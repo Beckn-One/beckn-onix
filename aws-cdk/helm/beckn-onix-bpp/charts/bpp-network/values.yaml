@@ -2,7 +2,7 @@ replicaCount: 1
 
 service:
   type: ClusterIP
-  port: 6001
+  port: 8082
 
 # Supported app mode - bap or bpp. Gateway mode to be either client or network.
 app:

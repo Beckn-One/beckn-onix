@@ -10,18 +10,26 @@ data:
    swf.plugins.background.core.workers.numThreads=3
    swf.application.authentication.required=false
    swf.application.requires.registration=true
+
+   # External host/port/scheme for registry, derived from Helm values
    swf.host={{ .Values.externalDomain }}
-   swf.external.port=443
-   swf.external.scheme=https
-   swf.jdbc.dbschema=public
+   swf.external.port={{ .Values.service.port }}
+   swf.external.scheme=http
+
+   # Embedded H2 database configuration (mirrors swf.properties-sample for local compose)
+   swf.jdbc.driver=org.h2.Driver
+   swf.jdbc.url=jdbc:h2:./database/registry;AUTO_SERVER=TRUE;
+   swf.jdbc.userid=registry
+   swf.jdbc.password=registry
+   swf.jdbc.validationQuery=values(1)
+   swf.jdbc.dbschema=PUBLIC
    swf.jdbc.dbschema.setonconnection=true
-   swf.jdbc.set.dbschema.command=set search_path to 'public'
-   swf.jdbc.url=jdbc:postgresql://{{ .Values.database.host }}/{{ .Values.database.dbname }}
-   swf.jdbc.driver=org.postgresql.Driver
-   swf.jdbc.userid={{ .Values.database.username }}
-   swf.jdbc.password={{ .Values.database.password }}
-   swf.jdbc.readOnly=false
+   swf.jdbc.set.dbschema.command=set schema public
+
    swf.api.keys.case=SNAKE
    swf.api.root.required=false
+
    swf.encryption.support=false
+   # swf.key.store.directory, passwords, etc. can be added here if you enable encryption
+
    swf.ftl.dir=src/main/resources/templates

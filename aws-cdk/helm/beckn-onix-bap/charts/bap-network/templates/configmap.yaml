@@ -17,21 +17,9 @@ data:
       # Optional. Default is 0.
       db: 1
 
-    # Mongodb connection details
-    responseCache:
-      # By default password is picked from MongoDB POD if not supplied through Helm values.
-      mongoURL: "mongodb://{{ .Values.global.responseCacheMongo.username }}:{{ if .Values.global.responseCacheMongo.password }}{{ .Values.global.responseCacheMongo.password }}{{ else }}{{ include "getSecretValue" (dict "secretName" "mongodb" "namespace" "bap-common-services" "key" "mongodb-root-password") }}{{ end }}@{{ .Values.global.responseCacheMongo.host }}:{{ .Values.global.responseCacheMongo.port }}/{{ .Values.global.responseCacheMongo.dbname }}?authSource=admin"
-      ttl: "PT10M"
-
-    # Priority order will be
-    # 1. Synchronous
-    # 2. webhook
-    # 3. pubSub
-
-    client:
-      synchronous:
-        # By default password is picked from MongoDB POD if not supplied through Helm values.
-        mongoURL: "mongodb://{{ .Values.global.responseCacheMongo.username }}:{{ if .Values.global.responseCacheMongo.password }}{{ .Values.global.responseCacheMongo.password }}{{ else }}{{ include "getSecretValue" (dict "secretName" "mongodb" "namespace" "bap-common-services" "key" "mongodb-root-password") }}{{ end }}@{{ .Values.global.responseCacheMongo.host }}:{{ .Values.global.responseCacheMongo.port }}/{{ .Values.global.responseCacheMongo.dbname }}?authSource=admin"
+    # MongoDB-based response cache and synchronous client storage have been
+    # removed in favour of a lighter Redis + RabbitMQ setup, in line with the
+    # new docker-compose for the ONIX adapters.
 
     # Only required for BPP
     # webhook:

@@ -1,0 +1,16 @@
+routingRules:
+  - domain: "beckn.one:deg:ev-charging:2.0.0"  # Retail domain
+    version: "2.0.0"
+    targetType: "url"
+    target:
+      url: "http://sandbox-bpp:3002/api/webhook"
+    endpoints:
+      - select
+      - init
+      - confirm
+      - status
+      - track
+      - cancel
+      - update
+      - rating
+      - support

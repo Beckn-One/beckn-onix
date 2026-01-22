@@ -31,14 +31,6 @@ spec:
       serviceAccountName: {{ include "common.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
-      initContainers:
-        - name: retain-schemas-content-ebs-volume
-          image: {{ .Values.global.image.repository }}
-          imagePullPolicy: {{ .Values.global.image.pullPolicy }}
-          command: ['sh', '-c', 'cp -r /usr/src/app/schemas/* /mnt/schemas/']
-          volumeMounts:
-            - name: bap-schemas-efs-volume
-              mountPath: /mnt/schemas
       containers:
         - name: {{ .Chart.Name }}
           image: {{ .Values.global.image.repository }}
@@ -47,6 +39,35 @@ spec:
             - name: bap-net-port
               containerPort: {{ .Values.service.port }}
               protocol: TCP
+
+          env:
+            # Path to the ONIX adapter config file inside the container.
+            # We use the baked-in local-beckn-one-bap.yaml, as in the new docker-compose.
+            - name: CONFIG_FILE
+              value: "/app/config/local-beckn-one-bap.yaml"
+
+            # Vault settings (adjust/remove if you don't actually use Vault)
+            - name: VAULT_ADDR
+              value: "http://vault:8200"
+            - name: VAULT_TOKEN
+              value: "root"
+
+            # Redis address, using the in-cluster Redis service
+            - name: REDIS_ADDR
+              value: "{{ .Values.global.redisCache.host }}:{{ .Values.global.redisCache.port }}"
+
+            # RabbitMQ address and credentials, using in-cluster RabbitMQ
+            - name: RABBITMQ_ADDR
+              value: "{{ .Values.global.rabbitMQamqp.host }}:{{ .Values.global.rabbitMQamqp.port }}"
+            - name: RABBITMQ_USER
+              value: "{{ .Values.global.rabbitMQamqp.username }}"
+            - name: RABBITMQ_PASS
+              value: "{{ if .Values.global.rabbitMQamqp.password }}{{ .Values.global.rabbitMQamqp.password }}{{ else }}{{ include "getSecretValue" (dict "secretName" "rabbitmq" "namespace" "bap-common-services" "key" "rabbitmq-password") }}{{ end }}"
+
+          # Align container entrypoint with docker-compose: ./server --config=/app/config/local-beckn-one-bap.yaml
+          command: ["./server"]
+          args: ["--config=/app/config/local-beckn-one-bap.yaml"]
+
           {{- if .Values.livenessProbe }}
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
@@ -58,13 +79,17 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
+            # ConfigMap-based default.yaml is currently unused by the adapter,
+            # which relies on the baked local-beckn-one-bap.yaml config. We keep
+            # this mount for backward compatibility but it is not referenced by CONFIG_FILE.
             - name: bap-network-config
               mountPath: "/usr/src/app/config/default.yaml"
               subPath: default.yaml
               readOnly: true
-            # EFS volumes for L2 schemas 
-            - name: bap-schemas-efs-volume
-              mountPath: /usr/src/app/schemas
+            # Full ONIX adapter config folder
+            - name: bap-adapter-config
+              mountPath: "/app/config"
+              readOnly: true
             # EBS volumes for logs
             - name: bap-network-logs-ebs-volume
               mountPath: /usr/src/app/logs
@@ -72,9 +97,9 @@ spec:
         - name: bap-network-config
           configMap:
             name: {{ include "common.name" . }}-config
-        - name: bap-schemas-efs-volume
-          persistentVolumeClaim:
-            claimName: beckn-onix-bap-efs-pvc
+        - name: bap-adapter-config
+          configMap:
+            name: {{ include "common.name" . }}-adapter-config
         - name: bap-network-logs-ebs-volume
           persistentVolumeClaim:
             claimName: {{ include "common.name" . }}-logs-pvc

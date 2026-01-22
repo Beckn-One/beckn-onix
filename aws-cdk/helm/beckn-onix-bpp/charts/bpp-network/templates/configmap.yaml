@@ -17,15 +17,11 @@ data:
       # Optional. Default is 0.
       db: 1
 
-    # Mongodb connection details
-    responseCache:
-      # By default password is picked from MongoDB POD if not supplied through Helm values.
-      mongoURL: "mongodb://{{ .Values.global.responseCacheMongo.username }}:{{ if .Values.global.responseCacheMongo.password }}{{ .Values.global.responseCacheMongo.password }}{{ else }}{{ include "getSecretValue" (dict "secretName" "mongodb" "namespace" "bpp-common-services" "key" "mongodb-root-password") }}{{ end }}@{{ .Values.global.responseCacheMongo.host }}:{{ .Values.global.responseCacheMongo.port }}/{{ .Values.global.responseCacheMongo.dbname }}?authSource=admin"
-      ttl: "PT10M"
+    # MongoDB-based response cache has been removed to align with the new
+    # ONIX adapter docker-compose, which uses only Redis and RabbitMQ.
 
-    
     client:
-    # Only required for BPP
+      # Only required for BPP
       webhook:
         url: "http://sandbox.beckn-onix-aws-cdk.becknprotocol.io"
 
