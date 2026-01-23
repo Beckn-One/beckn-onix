@@ -4,6 +4,8 @@ service:
   type: ClusterIP
   port: 8081
 
+fullnameOverride: "bap-onix"
+
 # Supported app mode - bap or bpp. Gateway mode to be either client or network.
 app:
   mode: bap

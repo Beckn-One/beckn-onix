@@ -5,12 +5,7 @@ import { ConfigProps, getConfig } from '../lib/config';
 
 import { VpcStack } from '../lib/vpc-stack';
 import { EksStack } from '../lib/eks-stack';
-import { RedisStack } from '../lib/redis-stack';
-import { DocumentDbStack } from '../lib/documentdb-stack';
-import { RabbitMqStack } from '../lib/rabbitmq-stack';
 
-import { HelmRegistryStack } from '../lib/helm-registry';
-import { HelmGatewayStack } from '../lib/helm-gateway';
 import { HelmCommonServicesStack } from '../lib/helm-beckn-common-services';
 import { HelmBapStack } from '../lib/helm-bap';
 import { HelmBppStack } from '../lib/helm-bpp';
@@ -34,31 +29,6 @@ if (!accountId || !region) {
 
 // Common environment configuration for all stacks
 const env = { account: accountId, region: region };
-
-// Function to deploy registry environment
-const deployRegistry = () => {
-  const vpcStack = new VpcStack(app, 'RegistryVpcStack', { config: config, env });
-  const eksStack = new EksStack(app, 'RegistryEksStack', { config: config, vpc: vpcStack.vpc, env });
-
-  new HelmRegistryStack(app, 'HelmRegistryStack', {
-    config: config,
-    eksCluster: eksStack.cluster,
-    env,
-  });
-};
-
-// Function to deploy gateway environment
-const deployGateway = () => {
-  const vpcStack = new VpcStack(app, 'GatewayVpcStack', { config: config, env });
-  const eksStack = new EksStack(app, 'GatewayEksStack', { config: config, vpc: vpcStack.vpc, env });
-
-  new HelmGatewayStack(app, 'HelmGatewayStack', {
-    config: config,
-    eksCluster: eksStack.cluster,
-    env,
-  });
-  
-};
 
 // Function to deploy BAP environment
 const deployBAP = () => {
@@ -111,19 +81,7 @@ const deployBPP = () => {
 const deploySandbox = () => {
   const vpcStack = new VpcStack(app, 'VpcStack', {config: config, env });
   const eksStack = new EksStack(app, 'EksStack', {config: config, vpc: vpcStack.vpc, env });
-  
-  new HelmRegistryStack(app, 'HelmRegistryStack', {
-    config: config,
-    eksCluster: eksStack.cluster,
-    env,
-  });
 
-  new HelmGatewayStack(app, 'HelmGatewayStack', {
-    config: config,
-    eksCluster: eksStack.cluster,
-    env,
-  });
-  
   // default - bitnami
   new HelmCommonServicesStack(app, 'BapHelmCommonServicesStack', {
     config: config,
@@ -166,14 +124,6 @@ switch (environment) {
   case 'sandbox':
     console.log('Deploying sandbox environment...');
     deploySandbox();
-    break;
-  case 'registry':
-    console.log('Deploying registry environment...');
-    deployRegistry();
-    break;
-  case 'gateway':
-    console.log('Deploying gateway environment...');
-    deployGateway();
     break;
   case 'bap':
     console.log('Deploying BAP environment...');
