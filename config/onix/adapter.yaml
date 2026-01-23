@@ -62,7 +62,7 @@ modules:
         middleware:
           - id: reqpreprocessor
             config:
-              uuidKeys: transaction_id,message_id
+              contextKeys: transaction_id,message_id
               role: bap
       steps:
         - validateSign
@@ -112,7 +112,7 @@ modules:
         middleware:
           - id: reqpreprocessor
             config:
-              uuidKeys: transaction_id,message_id
+              contextKeys: transaction_id,message_id
               role: bap
       steps:
         - validateSchema
@@ -163,7 +163,7 @@ modules:
         middleware:
           - id: reqpreprocessor
             config:
-              uuidKeys: transaction_id,message_id
+              contextKeys: transaction_id,message_id
               role: bpp
       steps:
         - validateSign
@@ -213,7 +213,7 @@ modules:
         middleware:
           - id: reqpreprocessor
             config:
-              uuidKeys: transaction_id,message_id
+              contextKeys: transaction_id,message_id
               role: bpp
       steps:
         - validateSchema

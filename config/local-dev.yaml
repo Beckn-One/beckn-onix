@@ -59,7 +59,7 @@ modules:
         middleware:
           - id: reqpreprocessor
             config:
-              uuidKeys: transaction_id,message_id
+              contextKeys: transaction_id,message_id
               role: bap
       steps:
         - addRoute
@@ -103,7 +103,7 @@ modules:
         middleware:
           - id: reqpreprocessor
             config:
-              uuidKeys: transaction_id,message_id
+              contextKeys: transaction_id,message_id
               role: bap
       steps:
         - addRoute
