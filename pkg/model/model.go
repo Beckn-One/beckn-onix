@@ -104,8 +104,8 @@ const (
 	RoleGateway Role = "gateway"
 	// RoleRegistery represents the Registry that maintains network participant details.
 	RoleRegistery Role = "registery"
-	// RoleCDS represents the CDS for that network
-	RoleCDS Role = "cds"
+	// RoleDiscovery represents the discovery for that network
+	RoleDiscovery Role = "discovery"
 )
 
 var validRoles = map[Role]bool{
@@ -113,7 +113,7 @@ var validRoles = map[Role]bool{
 	RoleBPP:       true,
 	RoleGateway:   true,
 	RoleRegistery: true,
-	RoleCDS:       true,
+	RoleDiscovery: true,
 }
 
 // UnmarshalYAML implements custom YAML unmarshalling for Role to ensure only valid values are accepted.
