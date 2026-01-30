@@ -31,7 +31,7 @@ modules:
         registry:
           id: dediregistry
           config:
-            url: https://api.testnet.beckn.one/registry/dedi # This is the testnet URL. The production URL is https://api.beckn.one/registry/dedi
+            url: https://api.dev.beckn.io/registry/dedi # This is the testnet URL. The production URL is https://api.beckn.io/registry/dedi
             registryName: subscribers.beckn.one # This is the wildcard string used to lookup across registries in Beckn One. Do not change this.
             timeout: 10
             retry_max: 3
@@ -91,7 +91,7 @@ modules:
         registry:
           id: dediregistry
           config:
-            url: https://api.testnet.beckn.one/registry/dedi # This is the testnet URL. The production URL is https://api.beckn.one/registry/dedi
+            url: https://api.dev.beckn.io/registry/dedi # This is the testnet URL. The production URL is https://api.beckn.io/registry/dedi
             registryName: subscribers.beckn.one # This is the wildcard string used to lookup across registries in Beckn One. Do not change this.
             timeout: 10
             retry_max: 3
