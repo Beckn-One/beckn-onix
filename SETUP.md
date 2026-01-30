@@ -542,7 +542,7 @@ curl http://localhost:8081/bap/receiver/
 Public cloud providers have built integration plugins and other tools to deploy Beckn ONIX easily. They provide specialized plugins that integrate with managed services on those platforms. Network participants can choose to consume them.
 
 1. [Google Cloud Platform](https://github.com/GoogleCloudPlatform/dpi-accelerator-beckn-onix)
-2. [Amazon Web Services](https://github.com/Beckn-One/beckn-onix/tree/main-pre-plugins/aws-cdk)
+2. [Amazon Web Services](https://github.com/beckn/onix-aws-cdk)
 
 The rest of the document focuses on how to deploy ONIX in Production with cloud agnostic plugins and tools.
 
