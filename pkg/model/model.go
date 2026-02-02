@@ -53,6 +53,9 @@ const (
 
 	// ContextKeyModuleID is the context key for storing and retrieving the model ID from a request context.
 	ContextKeyModuleID ContextKey = "module_id"
+
+	// ContextKeyParentID is the context key for  storing  and retrieving the parent ID from a request context
+	ContextKeyParentID ContextKey = "parent_id"
 )
 
 var contextKeys = map[string]ContextKey{
@@ -60,6 +63,7 @@ var contextKeys = map[string]ContextKey{
 	"message_id":     ContextKeyMsgID,
 	"subscriber_id":  ContextKeySubscriberID,
 	"module_id":      ContextKeyModuleID,
+	"parent_id":      ContextKeyParentID,
 }
 
 // ParseContextKey converts a string into a valid ContextKey.
@@ -100,6 +104,8 @@ const (
 	RoleGateway Role = "gateway"
 	// RoleRegistery represents the Registry that maintains network participant details.
 	RoleRegistery Role = "registery"
+	// RoleDiscovery represents the discovery for that network
+	RoleDiscovery Role = "discovery"
 )
 
 var validRoles = map[Role]bool{
@@ -107,6 +113,7 @@ var validRoles = map[Role]bool{
 	RoleBPP:       true,
 	RoleGateway:   true,
 	RoleRegistery: true,
+	RoleDiscovery: true,
 }
 
 // UnmarshalYAML implements custom YAML unmarshalling for Role to ensure only valid values are accepted.
