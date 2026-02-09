@@ -91,7 +91,7 @@ func nack(ctx context.Context, w http.ResponseWriter, err *model.Error, status i
 	if(err.Context != nil){
 		resp.Context = err.Context
 	}
-	if(err.Code == "500"){
+	if(err.Code == "500" && resp.Message.Error.Message == "") {
 		resp.Message.Error.Message = "INTERNAL_SERVER_ERROR"
 	}
 
